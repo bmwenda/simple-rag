@@ -1,14 +1,16 @@
 import os
+
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
+from pydantic import SecretStr
 
 load_dotenv()
 
 
 def embeddings() -> OpenAIEmbeddings:
     return OpenAIEmbeddings(
-        api_key=os.getenv("OPENAI_API_KEY"),
+        api_key=SecretStr(_get_required_env("OPENAI_API_KEY")),
         model="text-embedding-3-large"
     )
 
@@ -25,3 +27,10 @@ def save_documents() -> None:
 
     chunks, chunk_ids = load_and_chunk_sources()
     vector_store().add_documents(documents=chunks, ids=chunk_ids)
+
+
+def _get_required_env(name: str) -> str:
+    value = os.getenv(name)
+    if value is None:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
