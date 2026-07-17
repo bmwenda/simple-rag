@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local credentials
+.env
+
+# Chroma files
+chroma_db/
+chroma

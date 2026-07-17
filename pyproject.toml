@@ -3,5 +3,18 @@ name = "simple-rag"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = []
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "langchain-docling>=2.0.0",
+    "langchain-text-splitters>=0.0.1",
+    "langchain-chroma>=0.4.0",
+    "langchain-openai>=0.1.0",
+    "chromadb>=1.5.9",
+    "langchain-community>=0.4.2",
+    "python-dotenv>=1.0.1",
+]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'"
+]
