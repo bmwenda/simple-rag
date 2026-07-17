@@ -12,6 +12,7 @@ dependencies = [
     "chromadb>=1.5.9",
     "langchain-community>=0.4.2",
     "python-dotenv>=1.0.1",
+    "langchain>=1.3.14",
 ]
 
 [tool.uv]

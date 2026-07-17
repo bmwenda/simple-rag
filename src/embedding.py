@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
-from loader import load_and_chunk_sources
 
 load_dotenv()
 
@@ -22,6 +21,7 @@ def vector_store() -> Chroma:
 
 def save_documents() -> None:
     """Add chunks to the vector store"""
+    from .loader import load_and_chunk_sources
+
     chunks, chunk_ids = load_and_chunk_sources()
     vector_store().add_documents(documents=chunks, ids=chunk_ids)
-
