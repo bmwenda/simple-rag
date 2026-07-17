@@ -5,6 +5,8 @@ from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from pydantic import SecretStr
 
+from .loader import load_and_chunk_sources
+
 load_dotenv()
 
 
@@ -21,12 +23,12 @@ def vector_store() -> Chroma:
         persist_directory="./chroma_db"
     )
 
-def save_documents() -> None:
-    """Add chunks to the vector store"""
-    from .loader import load_and_chunk_sources
+def save_documents() -> list[str]:
+    """Load source files and add their chunks to the persisted vector store."""
 
-    chunks, chunk_ids = load_and_chunk_sources()
+    chunks, chunk_ids, source_files = load_and_chunk_sources()
     vector_store().add_documents(documents=chunks, ids=chunk_ids)
+    return source_files
 
 
 def _get_required_env(name: str) -> str:

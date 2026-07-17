@@ -21,7 +21,7 @@ def chat(query: str) -> str:
     except Exception as e:
         return(f"Sorry! I crapped out. Try again, or type q to exit :'(\n{str(e)}")
 
-print("Hello new joiner! Welcome to our company! Ask me any question regarding us e.g policies and other useful information.\nTo exit, type 'q', 'quit' or 'exit'")
+print("Hello new joiner! Welcome to Aetheris! Ask me any question regarding us e.g policies and other useful information.\nTo exit, type 'q', 'quit' or 'exit'")
 
 while True:
     user_input = input("> ")
