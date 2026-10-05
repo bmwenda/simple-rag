@@ -23,8 +23,13 @@ def _load_file(file_path: str) -> list[Document] | None:
 
 def load_and_chunk_sources(
     sources_dir: str = SOURCES_DIR,
+    chunk_size: int = 1000,
+    chunk_overlap: int = 200,
 ) -> tuple[list[Document], list[str], list[str]]:
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
 
     file_paths = sorted(
         path for path in glob.glob(os.path.join(sources_dir, "*"))
@@ -37,7 +42,8 @@ def load_and_chunk_sources(
 
     for file_path in file_paths:
         documents = _load_file(file_path)
-        if not documents: continue
+        if not documents:
+            continue
 
         split_chunks = text_splitter.split_documents(documents)
         base_name = os.path.basename(file_path)
@@ -48,7 +54,11 @@ def load_and_chunk_sources(
             all_chunks.append(
                 Document(
                     page_content=chunk.page_content,
-                    metadata={"source": file_path, "chunk_index": index},
+                    metadata={
+                        **chunk.metadata,
+                        "source": file_path,
+                        "chunk_index": index,
+                    },
                 )
             )
             all_ids.append(f"{source_id}-{index}")
