@@ -19,8 +19,10 @@ rather than duplicating it as a heading in the description.
 
 ## Description
 
-Explain what changed and why. Include important design choices, limitations, or
-follow-up work only when they help reviewers understand the change.
+Write one or two concise prose paragraphs explaining what changed and why. Do
+not use bullet points in the Description section. Include important design
+choices, limitations, or follow-up work only when they help reviewers understand
+the change.
 
 Add these sections when applicable:
 
