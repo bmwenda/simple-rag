@@ -15,6 +15,7 @@ class Settings:
     chroma_collection: str = "rag-documents"
     chroma_directory: Path = Path("chroma_db")
     retrieval_count: int = 4
+    retrieval_relevance_threshold: float = 0.2
     chunk_size: int = 1000
     chunk_overlap: int = 200
 
@@ -30,6 +31,9 @@ class Settings:
             chroma_collection=os.getenv("CHROMA_COLLECTION", "rag-documents"),
             chroma_directory=Path(os.getenv("CHROMA_DIRECTORY", "chroma_db")),
             retrieval_count=_integer_env("RETRIEVAL_COUNT", 4),
+            retrieval_relevance_threshold=_float_env(
+                "RETRIEVAL_RELEVANCE_THRESHOLD", 0.2
+            ),
             chunk_size=_integer_env("CHUNK_SIZE", 1000),
             chunk_overlap=_integer_env("CHUNK_OVERLAP", 200),
         )
@@ -39,6 +43,10 @@ class Settings:
     def validate(self) -> None:
         if self.retrieval_count < 1:
             raise ConfigurationError("RETRIEVAL_COUNT must be at least 1")
+        if not 0 <= self.retrieval_relevance_threshold <= 1:
+            raise ConfigurationError(
+                "RETRIEVAL_RELEVANCE_THRESHOLD must be between 0 and 1"
+            )
         if self.chunk_size < 1:
             raise ConfigurationError("CHUNK_SIZE must be at least 1")
         if self.chunk_overlap < 0:
@@ -62,3 +70,13 @@ def _integer_env(name: str, default: int) -> int:
         return int(raw_value)
     except ValueError as exc:
         raise ConfigurationError(f"{name} must be an integer") from exc
+
+
+def _float_env(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        return float(raw_value)
+    except ValueError as exc:
+        raise ConfigurationError(f"{name} must be a number") from exc

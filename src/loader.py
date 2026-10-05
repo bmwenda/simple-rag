@@ -5,9 +5,7 @@ from langchain_community.document_loaders import PyPDFium2Loader, TextLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-SOURCES_DIR = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "sources")
-)
+SOURCES_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "sources"))
 
 
 def _load_file(file_path: str) -> list[Document] | None:
@@ -32,7 +30,8 @@ def load_and_chunk_sources(
     )
 
     file_paths = sorted(
-        path for path in glob.glob(os.path.join(sources_dir, "*"))
+        path
+        for path in glob.glob(os.path.join(sources_dir, "*"))
         if os.path.isfile(path)
     )
 
@@ -51,14 +50,21 @@ def load_and_chunk_sources(
         source_files.append(base_name)
 
         for index, chunk in enumerate(split_chunks):
+            metadata = {
+                **chunk.metadata,
+                "document_id": source_id,
+                "display_name": base_name,
+                "source": file_path,
+                "chunk_index": index,
+            }
+            page = metadata.get("page")
+            if isinstance(page, int):
+                metadata["page_number"] = page + 1
+
             all_chunks.append(
                 Document(
                     page_content=chunk.page_content,
-                    metadata={
-                        **chunk.metadata,
-                        "source": file_path,
-                        "chunk_index": index,
-                    },
+                    metadata=metadata,
                 )
             )
             all_ids.append(f"{source_id}-{index}")

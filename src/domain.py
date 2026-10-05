@@ -18,5 +18,27 @@ class AnswerGenerationError(RAGError):
 
 
 @dataclass(frozen=True)
-class ChatResponse:
+class RetrievedChunk:
+    citation_id: int
+    document_id: str
+    display_name: str
+    page_number: int | None
+    chunk_index: int
     text: str
+    relevance_score: float
+
+
+@dataclass(frozen=True)
+class Citation:
+    citation_id: int
+    document_id: str
+    display_name: str
+    page_number: int | None
+    chunk_index: int
+    excerpt: str
+
+
+@dataclass(frozen=True)
+class Answer:
+    text: str
+    citations: tuple[Citation, ...]

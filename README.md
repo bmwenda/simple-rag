@@ -66,7 +66,10 @@ uv run python src/embedding.py
 uv run python main.py
 ```
 
-This opens a chat interface that you can use to fire your questions.
+This opens a chat interface for asking questions about the ingested documents.
+Answers include numbered sources with PDF page numbers when available. If no
+retrieved content meets the configured relevance threshold, the application
+returns an explicit no-answer response instead of calling the chat model.
 
 ## Development
 

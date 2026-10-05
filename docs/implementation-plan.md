@@ -236,7 +236,7 @@ Acceptance examples:
 
 ## 6. Delivery plan
 
-### Milestone 0 — testable foundations (P0, small)
+### Milestone 0 — testable foundations (P0, small) — Done
 
 - Move the interactive loop behind `main()` and `if __name__ == "__main__"`.
 - Introduce typed settings and domain result/error types.
@@ -247,7 +247,7 @@ Acceptance examples:
 Definition of done: importing application modules has no network/input side
 effects; CI-style checks run locally; current CLI behavior still works.
 
-### Milestone 1 — trustworthy citations (P0, medium)
+### Milestone 1 — trustworthy citations (P0, medium) — Done
 
 - Preserve original PDF metadata and normalize one-based page numbers.
 - Return `RetrievedChunk` records with scores from the retrieval layer.
