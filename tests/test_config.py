@@ -10,6 +10,7 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
     monkeypatch.setenv("RETRIEVAL_COUNT", "7")
+    monkeypatch.setenv("RETRIEVAL_RELEVANCE_THRESHOLD", "0.65")
     monkeypatch.setenv("CHROMA_DIRECTORY", "custom-db")
 
     settings = Settings.from_env()
@@ -17,6 +18,7 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
     assert settings.openai_api_key == "test-key"
     assert settings.openai_model == "test-model"
     assert settings.retrieval_count == 7
+    assert settings.retrieval_relevance_threshold == 0.65
     assert settings.chroma_directory == Path("custom-db")
 
 
@@ -29,6 +31,17 @@ def test_settings_reject_invalid_chunk_overlap() -> None:
     )
 
     with pytest.raises(ConfigurationError, match="smaller than CHUNK_SIZE"):
+        settings.validate()
+
+
+def test_settings_reject_invalid_relevance_threshold() -> None:
+    settings = Settings(
+        openai_api_key="test-key",
+        openai_model="test-model",
+        retrieval_relevance_threshold=1.1,
+    )
+
+    with pytest.raises(ConfigurationError, match="must be between 0 and 1"):
         settings.validate()
 
 

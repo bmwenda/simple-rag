@@ -1,59 +1,79 @@
 import os
-from functools import lru_cache
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from langchain_core.documents import Document
-from langchain_core.runnables import RunnableConfig
 
 from .config import Settings
-from .domain import RetrievalError
+from .domain import RetrievalError, RetrievedChunk
 from .embedding import vector_store
 
+DEFAULT_RETRIEVAL_COUNT = 4
+DEFAULT_RELEVANCE_THRESHOLD = 0.2
 
-class Retriever(Protocol):
-    def invoke(
+
+class SimilaritySearcher(Protocol):
+    def similarity_search_with_relevance_scores(
         self,
-        input: str,
-        config: RunnableConfig | None = None,
+        query: str,
+        k: int = 4,
         **kwargs: Any,
-    ) -> list[Document]: ...
+    ) -> list[tuple[Document, float]]: ...
 
 
-@lru_cache(maxsize=1)
-def _get_retriever(settings: Settings) -> Retriever:
-    """Return a retriever backed by the persisted Chroma collection."""
-    return vector_store(settings).as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": settings.retrieval_count},
-    )
-
-
-def get_retriever(settings: Settings | None = None) -> Retriever:
-    return _get_retriever(settings or Settings.from_env())
-
-
-def format_context(documents: list[Document]) -> str:
-    if not documents:
-        return "No relevant documents were found."
-
-    return "\n\n".join(
-        f"[Source: {os.path.basename(doc.metadata.get('source', 'unknown'))}]\n"
-        f"{doc.page_content}"
-        for doc in documents
-    )
+def get_searcher(settings: Settings | None = None) -> SimilaritySearcher:
+    configured_settings = settings or Settings.from_env()
+    return cast(SimilaritySearcher, vector_store(configured_settings))
 
 
 def retrieve_documents(
     query: str,
-    retriever: Retriever | None = None,
+    searcher: SimilaritySearcher | None = None,
     settings: Settings | None = None,
-) -> str:
-    """Retrieve relevant chunks for a query and format them with source attribution."""
-    retriever = retriever or get_retriever(settings)
+) -> list[RetrievedChunk]:
+    """Return relevant chunks with stable request-local citation identifiers."""
+    retrieval_count = settings.retrieval_count if settings else DEFAULT_RETRIEVAL_COUNT
+    threshold = (
+        settings.retrieval_relevance_threshold
+        if settings
+        else DEFAULT_RELEVANCE_THRESHOLD
+    )
+    searcher = searcher or get_searcher(settings)
 
     try:
-        retrieved_docs = retriever.invoke(query)
+        results = searcher.similarity_search_with_relevance_scores(
+            query,
+            k=retrieval_count,
+        )
     except Exception as exc:
         raise RetrievalError("Document retrieval failed") from exc
 
-    return format_context(retrieved_docs)
+    relevant_results = [
+        (document, float(score)) for document, score in results if score >= threshold
+    ]
+
+    return [
+        _to_retrieved_chunk(document, score, citation_id)
+        for citation_id, (document, score) in enumerate(relevant_results, start=1)
+    ]
+
+
+def _to_retrieved_chunk(
+    document: Document,
+    score: float,
+    citation_id: int,
+) -> RetrievedChunk:
+    metadata = document.metadata
+    source = str(metadata.get("source", "unknown"))
+    display_name = str(metadata.get("display_name") or os.path.basename(source))
+    page_number = metadata.get("page_number")
+    chunk_index = metadata.get("chunk_index", 0)
+
+    return RetrievedChunk(
+        citation_id=citation_id,
+        document_id=str(metadata.get("document_id") or source),
+        display_name=display_name,
+        page_number=page_number if isinstance(page_number, int) else None,
+        chunk_index=chunk_index if isinstance(chunk_index, int) else 0,
+        text=document.page_content,
+        relevance_score=score,
+    )

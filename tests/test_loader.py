@@ -33,8 +33,11 @@ def test_load_and_chunk_sources_preserves_loader_metadata(
     assert chunks[0].metadata == {
         "page": 2,
         "producer": "test",
+        "document_id": "handbook_pdf",
+        "display_name": "handbook.pdf",
         "source": str(source),
         "chunk_index": 0,
+        "page_number": 3,
     }
 
 
