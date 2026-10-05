@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import Any, Protocol, cast
 
 from langchain_core.documents import Document
@@ -40,10 +41,16 @@ def retrieve_documents(
     searcher = searcher or get_searcher(settings)
 
     try:
-        results = searcher.similarity_search_with_relevance_scores(
-            query,
-            k=retrieval_count,
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"Relevance scores must be between 0 and 1, got .*",
+                category=UserWarning,
+            )
+            results = searcher.similarity_search_with_relevance_scores(
+                query,
+                k=retrieval_count,
+            )
     except Exception as exc:
         raise RetrievalError("Document retrieval failed") from exc
 
