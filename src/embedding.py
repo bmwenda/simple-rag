@@ -1,38 +1,35 @@
-import os
-
-from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from pydantic import SecretStr
 
+from .config import Settings
 from .loader import load_and_chunk_sources
 
-load_dotenv()
 
-
-def embeddings() -> OpenAIEmbeddings:
+def embeddings(settings: Settings | None = None) -> OpenAIEmbeddings:
+    settings = settings or Settings.from_env()
     return OpenAIEmbeddings(
-        api_key=SecretStr(_get_required_env("OPENAI_API_KEY")),
-        model="text-embedding-3-large"
+        api_key=SecretStr(settings.openai_api_key),
+        model=settings.embedding_model,
     )
 
-def vector_store() -> Chroma:
+
+def vector_store(settings: Settings | None = None) -> Chroma:
+    settings = settings or Settings.from_env()
     return Chroma(
-        embedding_function=embeddings(),
-        collection_name="rag-documents",
-        persist_directory="./chroma_db"
+        embedding_function=embeddings(settings),
+        collection_name=settings.chroma_collection,
+        persist_directory=str(settings.chroma_directory),
     )
 
-def save_documents() -> list[str]:
+
+def save_documents(settings: Settings | None = None) -> list[str]:
     """Load source files and add their chunks to the persisted vector store."""
 
-    chunks, chunk_ids, source_files = load_and_chunk_sources()
-    vector_store().add_documents(documents=chunks, ids=chunk_ids)
+    settings = settings or Settings.from_env()
+    chunks, chunk_ids, source_files = load_and_chunk_sources(
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+    )
+    vector_store(settings).add_documents(documents=chunks, ids=chunk_ids)
     return source_files
-
-
-def _get_required_env(name: str) -> str:
-    value = os.getenv(name)
-    if value is None:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value

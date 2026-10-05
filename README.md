@@ -43,6 +43,9 @@ This is a simple Retrieval-Augmented Generation (RAG) command line application t
    OPENAI_MODEL=gpt-4-turbo
    ```
 
+   See `.env.example` for optional embedding, Chroma, retrieval, and chunking
+   settings.
+
 4. **Add documents:**
    Place your `.txt` or `.pdf` files in the `sources/` folder
 
@@ -67,8 +70,16 @@ This opens a chat interface that you can use to fire your questions.
 
 ## Development
 
-Run type checking:
+Run the complete local check suite:
+
 ```bash
-uv run mypy src/
+uv run ruff check .
+uv run mypy src/ main.py ingest_sources.py
+uv run pytest
 ```
 
+Run an individual check:
+
+```bash
+uv run pytest tests/test_retriever.py
+```

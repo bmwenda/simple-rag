@@ -1,32 +1,37 @@
-from langchain_core.prompts import ChatPromptTemplate
+from typing import Protocol
 
-from src.model import get_chat_model
-from src.retriever import retrieve_documents
+from src.chat import create_chat_service
+from src.config import Settings
+from src.domain import ChatResponse, RAGError
 
-SYSTEM_PROMPT = "You are a helpful assistance. Answer questions concisely and use only the company information as context.\n\nContext:\n{context}\nIf you don't have an answer from the context, politely guide the user to consult their manager, HR or onboarding buddy for guidance"
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_PROMPT),
-    ("human", "{query}")
-])
+class AnswerService(Protocol):
+    def answer(self, query: str) -> ChatResponse: ...
 
-llm = get_chat_model()
-chain = prompt | llm
 
-def chat(query: str) -> str:
+def chat(query: str, service: AnswerService) -> str:
     try:
-        context = retrieve_documents(query)
-        response = chain.invoke({"context": context, "query": query})
-        return response.text
-    except Exception as e:
-        return(f"Sorry! I crapped out. Try again, or type q to exit :'(\n{str(e)}")
+        return service.answer(query).text
+    except RAGError:
+        return "Sorry, I couldn't answer that right now. Please try again."
 
-print("Hello new joiner! Welcome to Aetheris! Ask me any question regarding us e.g policies and other useful information.\nTo exit, type 'q', 'quit' or 'exit'")
 
-while True:
-    user_input = input("> ")
-    if user_input.strip().lower() in ["q", "quit", "exit"]:
-        print("See you soon!!")
-        break
+def main() -> None:
+    service = create_chat_service(Settings.from_env())
+    print(
+        "Hello new joiner! Welcome to Aetheris! Ask me any question regarding "
+        "us, such as policies and other useful information.\nTo exit, type 'q', "
+        "'quit', or 'exit'."
+    )
 
-    print(chat(user_input))
+    while True:
+        user_input = input("> ")
+        if user_input.strip().lower() in {"q", "quit", "exit"}:
+            print("See you soon!!")
+            break
+
+        print(chat(user_input, service))
+
+
+if __name__ == "__main__":
+    main()
