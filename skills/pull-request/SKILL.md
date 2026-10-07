@@ -24,7 +24,25 @@ not use bullet points in the Description section. Include important design
 choices, limitations, or follow-up work only when they help reviewers understand
 the change.
 
-Add these sections when applicable:
+## Acceptance criteria
+
+Copy the linked issue's acceptance criteria into this section and state how
+each criterion is satisfied. If the issue has no explicit criteria, derive a
+short, reviewable set from its requested outcome and call that out.
+
+## Issue
+
+Reference the issue with a GitHub closing keyword so it closes automatically
+when the pull request merges. Use `Closes #<number>` (or `Fixes #<number>`)
+for every issue addressed by the pull request. Do not rely on a plain URL
+alone. If the issue number is unknown, stop and request it before creating the
+pull request.
+
+## Testing
+
+List the checks that were actually run and their results. Include manual test
+steps when reviewer reproduction is useful. If testing is relevant but could
+not be performed, state that clearly with the reason.
 
 ## Artifacts
 
