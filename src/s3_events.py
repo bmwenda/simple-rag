@@ -10,8 +10,31 @@ class S3ObjectCreatedEvent:
     key: str
 
 
-def s3_object_created_events(payload: dict[str, object]) -> Iterable[S3ObjectCreatedEvent]:
-    """Yield object-created records from S3 notifications or SQS-wrapped S3 events."""
+def sqs_s3_object_created_events(
+    payload: dict[str, object],
+) -> Iterable[S3ObjectCreatedEvent]:
+    """Yield object-created records from S3 notifications delivered by SQS."""
+    records = payload.get("Records", [])
+    if not isinstance(records, list):
+        raise TypeError("SQS event Records must be a list")
+
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        if record.get("eventSource") != "aws:sqs":
+            raise ValueError("S3 ingestion accepts only SQS-delivered events")
+        body = record.get("body")
+        if not isinstance(body, str):
+            raise TypeError("SQS event body must be a JSON string")
+        decoded = json.loads(body)
+        if not isinstance(decoded, dict):
+            raise TypeError("SQS event body must be a JSON object")
+        yield from _s3_object_created_events(decoded)
+
+
+def _s3_object_created_events(
+    payload: dict[str, object],
+) -> Iterable[S3ObjectCreatedEvent]:
     records = payload.get("Records", [])
     if not isinstance(records, list):
         raise TypeError("S3 event Records must be a list")
@@ -19,16 +42,6 @@ def s3_object_created_events(payload: dict[str, object]) -> Iterable[S3ObjectCre
     for record in records:
         if not isinstance(record, dict):
             continue
-        if record.get("eventSource") == "aws:sqs":
-            body = record.get("body")
-            if not isinstance(body, str):
-                raise ValueError("SQS event body must be a JSON string")
-            decoded = json.loads(body)
-            if not isinstance(decoded, dict):
-                raise ValueError("SQS event body must be a JSON object")
-            yield from s3_object_created_events(decoded)
-            continue
-
         event_name = record.get("eventName")
         s3 = record.get("s3")
         if not isinstance(event_name, str) or not event_name.startswith("ObjectCreated:"):

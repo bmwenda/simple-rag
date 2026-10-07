@@ -274,9 +274,9 @@ another.
 
 - Add local/S3 storage adapters and AWS configuration.
 - Treat the configured source bucket/prefix as an ingestion source: route S3
-  `ObjectCreated` events (directly or through SQS) to the ingestion handler,
-  validate bucket/key/size before download, and use the stable `s3://bucket/key`
-  URI as the document identity.
+  `ObjectCreated` events through SQS to the Lambda ingestion handler, validate
+  bucket/key/size before download, and use the stable `s3://bucket/key` URI as
+  the document identity. Direct S3-to-Lambda delivery is unsupported.
 - Add a minimal API for create-upload, complete-upload, status, and delete, or
   expose equivalent application-service methods if the API is deferred.
 - Upload directly with short-lived presigned URLs; use multipart above the
