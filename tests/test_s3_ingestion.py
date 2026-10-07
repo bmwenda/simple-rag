@@ -116,6 +116,15 @@ def test_s3_storage_rejects_objects_outside_the_configured_source_scope(
         storage.get_object("another-bucket", "incoming/document.txt")
 
 
+def test_s3_storage_allows_markdown_sources(tmp_path: Path) -> None:
+    client = FakeS3Client({("source-bucket", "incoming/handbook.md"): b"# Handbook"})
+    _, _, storage = make_s3_service(tmp_path, client)
+
+    source = storage.get_object("source-bucket", "incoming/handbook.md")
+
+    assert source.content_type == "text/plain"
+
+
 def test_s3_event_handler_accepts_sqs_wrapped_object_created_events(
     tmp_path: Path,
 ) -> None:

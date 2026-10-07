@@ -160,7 +160,7 @@ def test_ingest_source_cleans_partial_new_version_when_retries_are_exhausted(
 def test_ingest_sources_isolates_failed_documents(tmp_path: Path) -> None:
     sources_dir = tmp_path / "sources"
     sources_dir.mkdir()
-    write_source(sources_dir, "broken.csv", "not supported")
+    write_source(sources_dir, "broken.bin", "not supported")
     write_source(sources_dir, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore()
     service, _ = make_service(tmp_path, store)
@@ -170,7 +170,7 @@ def test_ingest_sources_isolates_failed_documents(tmp_path: Path) -> None:
     assert [
         (result.document.display_name, result.document.status) for result in results
     ] == [
-        ("broken.csv", DocumentStatus.FAILED),
+        ("broken.bin", DocumentStatus.FAILED),
         ("handbook.txt", DocumentStatus.READY),
     ]
     assert results[0].document.error_code == "RuntimeError"
