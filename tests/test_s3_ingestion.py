@@ -9,7 +9,7 @@ from src.config import Settings
 from src.document_registry import DocumentRegistry
 from src.domain import DocumentStatus
 from src.ingestion import DocumentIngestionService
-from src.s3_events import s3_object_created_events
+from src.s3_events import sqs_s3_object_created_events
 from src.s3_ingestion_handler import S3IngestionHandler
 from src.storage import S3DocumentStorage
 
@@ -142,4 +142,21 @@ def test_s3_event_handler_accepts_sqs_wrapped_object_created_events(
     assert results[0]["status"] == "ready"
     assert results[0]["indexed"] is True
     assert isinstance(results[0]["document_id"], str)
-    assert list(s3_object_created_events({"Records": []})) == []
+    assert list(sqs_s3_object_created_events({"Records": []})) == []
+
+
+def test_s3_event_parser_rejects_direct_s3_invocations() -> None:
+    direct_s3_event: dict[str, object] = {
+        "Records": [
+            {
+                "eventName": "ObjectCreated:Put",
+                "s3": {
+                    "bucket": {"name": "source-bucket"},
+                    "object": {"key": "incoming%2Fhandbook.txt"},
+                },
+            }
+        ]
+    }
+
+    with pytest.raises(ValueError, match="only SQS-delivered"):
+        list(sqs_s3_object_created_events(direct_s3_event))

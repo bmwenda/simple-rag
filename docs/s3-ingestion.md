@@ -26,14 +26,15 @@ Keep the bucket private and enable server-side encryption.
 ## Event delivery
 
 Deploy `src.s3_ingestion_handler.lambda_handler` as the worker entrypoint.
-Configure an S3 event notification for `s3:ObjectCreated:*`, filtered to the
-configured prefix and the `.pdf`/`.txt` suffixes. The handler accepts native S3
-event payloads and S3 messages delivered through SQS, so S3-to-SQS-to-Lambda is
-the recommended production topology for buffering and retry control.
+Configure S3 event notifications for `s3:ObjectCreated:*` to deliver to SQS,
+then configure Lambda with that SQS queue as its event source. Apply the
+configured prefix and `.pdf`/`.txt` suffix filters on the S3 notification. The
+handler intentionally accepts only SQS-delivered S3 event payloads; direct S3
+to Lambda delivery is unsupported.
 
-For SQS delivery, configure a dead-letter queue and set the Lambda visibility
-timeout longer than the largest expected document ingestion time. The handler
-returns a compact status payload and never returns raw exception details.
+Configure a dead-letter queue and set the Lambda visibility timeout longer than
+the largest expected document ingestion time. The handler returns a compact
+status payload and never returns raw exception details.
 
 ## Local verification
 

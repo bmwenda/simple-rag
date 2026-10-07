@@ -2,7 +2,7 @@ from typing import Any
 
 from .config import Settings
 from .ingestion import DocumentIngestionService, create_ingestion_service
-from .s3_events import s3_object_created_events
+from .s3_events import sqs_s3_object_created_events
 from .storage import S3DocumentStorage, create_s3_document_storage
 
 
@@ -17,7 +17,7 @@ class S3IngestionHandler:
 
     def handle(self, event: dict[str, object]) -> list[dict[str, object]]:
         results: list[dict[str, object]] = []
-        for record in s3_object_created_events(event):
+        for record in sqs_s3_object_created_events(event):
             result = self._service.ingest_s3_object(
                 self._storage,
                 bucket=record.bucket,
@@ -38,7 +38,7 @@ def lambda_handler(
     event: dict[str, object],
     _context: object | None = None,
 ) -> dict[str, Any]:
-    """AWS Lambda entrypoint for direct S3 or SQS-delivered S3 events."""
+    """AWS Lambda entrypoint for SQS-delivered S3 object-created events."""
     settings = Settings.from_env()
     storage = create_s3_document_storage(
         bucket=settings.s3_source_bucket,
