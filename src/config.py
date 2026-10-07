@@ -14,10 +14,13 @@ class Settings:
     embedding_model: str = "text-embedding-3-large"
     chroma_collection: str = "rag-documents"
     chroma_directory: Path = Path("chroma_db")
+    document_registry_path: Path = Path("chroma_db/documents.sqlite3")
     retrieval_count: int = 4
     retrieval_relevance_threshold: float = 0.2
     chunk_size: int = 1000
     chunk_overlap: int = 200
+    embedding_batch_size: int = 100
+    ingestion_max_attempts: int = 2
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -30,12 +33,17 @@ class Settings:
             ),
             chroma_collection=os.getenv("CHROMA_COLLECTION", "rag-documents"),
             chroma_directory=Path(os.getenv("CHROMA_DIRECTORY", "chroma_db")),
+            document_registry_path=Path(
+                os.getenv("DOCUMENT_REGISTRY_PATH", "chroma_db/documents.sqlite3")
+            ),
             retrieval_count=_integer_env("RETRIEVAL_COUNT", 4),
             retrieval_relevance_threshold=_float_env(
                 "RETRIEVAL_RELEVANCE_THRESHOLD", 0.2
             ),
             chunk_size=_integer_env("CHUNK_SIZE", 1000),
             chunk_overlap=_integer_env("CHUNK_OVERLAP", 200),
+            embedding_batch_size=_integer_env("EMBEDDING_BATCH_SIZE", 100),
+            ingestion_max_attempts=_integer_env("INGESTION_MAX_ATTEMPTS", 2),
         )
         settings.validate()
         return settings
@@ -53,6 +61,10 @@ class Settings:
             raise ConfigurationError("CHUNK_OVERLAP cannot be negative")
         if self.chunk_overlap >= self.chunk_size:
             raise ConfigurationError("CHUNK_OVERLAP must be smaller than CHUNK_SIZE")
+        if self.embedding_batch_size < 1:
+            raise ConfigurationError("EMBEDDING_BATCH_SIZE must be at least 1")
+        if self.ingestion_max_attempts < 1:
+            raise ConfigurationError("INGESTION_MAX_ATTEMPTS must be at least 1")
 
 
 def _required_env(name: str) -> str:

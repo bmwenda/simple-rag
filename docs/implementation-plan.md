@@ -259,7 +259,7 @@ effects; CI-style checks run locally; current CLI behavior still works.
 Definition of done: every grounded factual answer exposes only retrieved
 sources, including a page number when available; unsupported answers abstain.
 
-### Milestone 2 — per-document, idempotent ingestion (P0, medium)
+### Milestone 2 — per-document, idempotent ingestion (P0, medium) — Done
 
 - Add document identity, checksum, status, and index-version records.
 - Refactor loading/chunking to process a single document.

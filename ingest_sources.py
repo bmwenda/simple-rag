@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 from src.config import Settings
-from src.embedding import save_documents
+from src.domain import DocumentStatus
+from src.ingestion import create_ingestion_service
 
 
 def main() -> None:
-    files = save_documents(Settings.from_env())
-    print("The following files were ingested:")
-    for file in files:
-        print(file)
+    results = create_ingestion_service(Settings.from_env()).ingest_sources()
+    for result in results:
+        document = result.document
+        if document.status is DocumentStatus.READY:
+            action = "indexed" if result.indexed else "unchanged"
+            print(
+                f"{document.display_name}: {action} (version {document.index_version})"
+            )
+        else:
+            print(f"{document.display_name}: failed ({document.error_code})")
 
 
 if __name__ == "__main__":

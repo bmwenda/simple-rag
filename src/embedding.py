@@ -3,7 +3,6 @@ from langchain_openai import OpenAIEmbeddings
 from pydantic import SecretStr
 
 from .config import Settings
-from .loader import load_and_chunk_sources
 
 
 def embeddings(settings: Settings | None = None) -> OpenAIEmbeddings:
@@ -24,12 +23,10 @@ def vector_store(settings: Settings | None = None) -> Chroma:
 
 
 def save_documents(settings: Settings | None = None) -> list[str]:
-    """Load source files and add their chunks to the persisted vector store."""
+    """Ingest all local sources and return documents indexed in this run."""
 
     settings = settings or Settings.from_env()
-    chunks, chunk_ids, source_files = load_and_chunk_sources(
-        chunk_size=settings.chunk_size,
-        chunk_overlap=settings.chunk_overlap,
-    )
-    vector_store(settings).add_documents(documents=chunks, ids=chunk_ids)
-    return source_files
+    from .ingestion import create_ingestion_service
+
+    results = create_ingestion_service(settings).ingest_sources()
+    return [result.document.display_name for result in results if result.indexed]

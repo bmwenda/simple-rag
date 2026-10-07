@@ -29,13 +29,14 @@ def test_load_and_chunk_sources_preserves_loader_metadata(
     )
 
     assert source_files == ["handbook.pdf"]
-    assert chunk_ids == ["handbook_pdf-0"]
+    assert chunk_ids == ["handbook_pdf:0:0"]
     assert chunks[0].metadata == {
         "page": 2,
         "producer": "test",
         "document_id": "handbook_pdf",
         "display_name": "handbook.pdf",
         "source": str(source),
+        "index_version": 0,
         "chunk_index": 0,
         "page_number": 3,
     }
