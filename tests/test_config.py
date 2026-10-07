@@ -45,6 +45,17 @@ def test_settings_reject_invalid_relevance_threshold() -> None:
         settings.validate()
 
 
+def test_settings_reject_invalid_ingestion_configuration() -> None:
+    settings = Settings(
+        openai_api_key="test-key",
+        openai_model="test-model",
+        embedding_batch_size=0,
+    )
+
+    with pytest.raises(ConfigurationError, match="EMBEDDING_BATCH_SIZE"):
+        settings.validate()
+
+
 def test_settings_reject_non_integer_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

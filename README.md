@@ -57,11 +57,19 @@ This is a simple Retrieval-Augmented Generation (RAG) command line application t
 ## Usage
 
 ### Ingest Documents
+
 ```bash
-uv run python src/embedding.py
+uv run python ingest_sources.py
 ```
 
+Each source receives a persistent document identity and checksum in the local
+registry. Re-running ingestion skips unchanged documents; changing a file writes
+a new index version and removes the old chunks after the replacement succeeds.
+Failures are isolated to the affected document and retried according to
+`INGESTION_MAX_ATTEMPTS`.
+
 ### Query Documents
+
 ```bash
 uv run python main.py
 ```
