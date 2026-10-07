@@ -26,12 +26,6 @@ the change.
 
 Add these sections when applicable:
 
-## Testing
-
-List the checks that were actually run and their results. Include manual test
-steps when reviewer reproduction is useful. If testing is relevant but could
-not be performed, state that clearly with the reason.
-
 ## Artifacts
 
 Link or attach reviewer evidence such as screenshots, recordings, logs, sample
