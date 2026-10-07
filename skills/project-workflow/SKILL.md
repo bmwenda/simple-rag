@@ -6,9 +6,16 @@ description: Execute the repository's issue-driven GitHub Project workflow from 
 # Project workflow
 
 Use this skill when the user selects a GitHub issue from the Simple RAG project
-board and provides its link. The issue is the source of truth for scope and
-acceptance criteria; do not start implementation without an issue link or
-number.
+board and provides its link, or asks for an ad hoc change without an existing
+issue. The issue is the source of truth for scope and acceptance criteria; do
+not start implementation without an issue number.
+
+For an ad hoc request with no issue, create a GitHub issue before reviewing or
+implementing the change. Give it a concise outcome-focused title and a body
+with the requested context and testable acceptance criteria. Use the newly
+created issue as the workflow input, and add it to the project when it belongs
+to the project backlog. Do not treat the chat request as a substitute for the
+issue or begin implementation before the issue exists.
 
 ## 1. Review the issue
 
