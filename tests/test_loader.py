@@ -50,3 +50,36 @@ def test_load_and_chunk_sources_ignores_directories(tmp_path: Path) -> None:
     assert chunks == []
     assert chunk_ids == []
     assert source_files == []
+
+
+def test_load_file_uses_generic_loader_for_markdown(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    source = tmp_path / "handbook.md"
+    source.write_text("# Handbook", encoding="utf-8")
+    calls: list[str] = []
+
+    class FakeLoader:
+        def __init__(self, *, file_path: str) -> None:
+            calls.append(file_path)
+
+        def load(self) -> list[Document]:
+            return [Document(page_content="Handbook", metadata={})]
+
+    monkeypatch.setattr(loader, "DoclingLoader", FakeLoader)
+
+    assert loader._load_file(str(source))[0].page_content == "Handbook"
+    assert calls == [str(source)]
+
+
+def test_load_file_rejects_unallowlisted_extensions(tmp_path: Path) -> None:
+    source = tmp_path / "program.bin"
+    source.write_bytes(b"not a document")
+
+    try:
+        loader._load_file(str(source))
+    except RuntimeError as error:
+        assert str(error) == "Unsupported document type"
+    else:
+        raise AssertionError("Expected unsupported files to be rejected")

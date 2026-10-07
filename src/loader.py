@@ -1,22 +1,26 @@
 import glob
+import logging
 import os
 
-from langchain_community.document_loaders import PyPDFium2Loader, TextLoader
+# Docling imports optional transformer integrations. This keeps their optional-model
+# notices out of the CLI while conversion errors still propagate to ingestion.
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+logging.getLogger("docling").setLevel(logging.ERROR)
+
 from langchain_core.documents import Document
+from langchain_docling.loader import DoclingLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from .document_types import is_supported_document
 
 SOURCES_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "sources"))
 
 
-def _load_file(file_path: str) -> list[Document] | None:
-    """Pick a loader based on file type."""
-    file_extension = os.path.splitext(file_path)[1].lower()
-    if file_extension == ".txt":
-        return TextLoader(file_path).load()
-    if file_extension == ".pdf":
-        return PyPDFium2Loader(file_path).load()
-    else:
-        raise RuntimeError("Unsupported document type. More coming soon!")
+def _load_file(file_path: str) -> list[Document]:
+    """Load an allowed document with the maintained generic file loader."""
+    if not is_supported_document(file_path):
+        raise RuntimeError("Unsupported document type")
+    return DoclingLoader(file_path=file_path).load()
 
 
 def load_and_chunk_sources(

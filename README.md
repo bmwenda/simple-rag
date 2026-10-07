@@ -2,17 +2,22 @@
 
 This is a simple Retrieval-Augmented Generation (RAG) command line application that enables you to load documents, process them into searchable chunks, and retrieve relevant information using semantic search. It combines document ingestion, embedding, and intelligent retrieval to provide context-aware responses.
 
+The implemented capabilities, deployment constraints, and remaining delivery
+tasks are maintained in the [product and delivery specification](docs/specification.md).
+
 ## Key Technologies
 
 - **LangChain** - LLM framework for building RAG pipelines
 - **OpenAI Embeddings** - Semantic text embeddings for understanding document meaning
 - **Chroma** - Vector database for efficient document storage and retrieval
-- **DoclingLoader** - Extracts content from PDF and document files
+- **DoclingLoader** - Parses PDF, text, Markdown, HTML, Office, and other
+  supported document formats
 - **RecursiveCharacterTextSplitter** - Intelligent document chunking with overlap
 
 ## How It Works
 
-1. **Load Documents** - Place your documents (`.txt` or `.pdf` files) in the `sources/` folder
+1. **Load Documents** - Place supported documents, such as PDF, text, Markdown,
+   HTML, or Office files, in the `sources/` folder
 2. **Process & Chunk** - Documents are automatically split into overlapping chunks for better retrieval
 3. **Generate Embeddings** - Each chunk is converted into semantic embeddings using OpenAI
 4. **Store in Vector DB** - Embeddings are stored in Chroma for fast similarity search
@@ -47,7 +52,8 @@ This is a simple Retrieval-Augmented Generation (RAG) command line application t
    settings.
 
 4. **Add documents:**
-   Place your `.txt` or `.pdf` files in the `sources/` folder
+   Place supported documents, such as PDF, text, Markdown, HTML, or Office
+   files, in the `sources/` folder
 
 5. **Ingest documents:**
    ```bash

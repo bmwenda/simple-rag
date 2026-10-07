@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from .document_types import is_supported_document
 from .domain import ConfigurationError
 
 
@@ -67,7 +68,7 @@ class S3DocumentStorage:
             raise ValueError("S3 event does not identify a document object")
         if self._prefix and not key.startswith(f"{self._prefix}/"):
             raise ValueError("S3 object is outside S3_SOURCE_PREFIX")
-        if Path(key).suffix.lower() not in {".pdf", ".txt"}:
+        if not is_supported_document(key):
             raise ValueError("Unsupported S3 document type")
 
 

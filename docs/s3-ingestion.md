@@ -1,11 +1,12 @@
 # S3 source-bucket ingestion
 
 The application can ingest documents uploaded to one private S3 source bucket.
-It accepts `.pdf` and `.txt` objects from the configured prefix, reads object
-metadata before downloading, rejects objects larger than the configured limit,
-and streams the object to a temporary file. The temporary filename is never
-used as the document identity: the registry tracks `s3://<bucket>/<key>`, so a
-new upload at the same key replaces the prior index version.
+It accepts allowlisted PDF, text, Markdown, HTML, Office, and other general
+document formats from the configured prefix, reads object metadata before
+downloading, rejects objects larger than the configured limit, and streams the
+object to a temporary file. The temporary filename is never used as the document
+identity: the registry tracks `s3://<bucket>/<key>`, so a new upload at the same
+key replaces the prior index version.
 
 ## Configuration
 
@@ -28,9 +29,9 @@ Keep the bucket private and enable server-side encryption.
 Deploy `src.s3_ingestion_handler.lambda_handler` as the worker entrypoint.
 Configure S3 event notifications for `s3:ObjectCreated:*` to deliver to SQS,
 then configure Lambda with that SQS queue as its event source. Apply the
-configured prefix and `.pdf`/`.txt` suffix filters on the S3 notification. The
-handler intentionally accepts only SQS-delivered S3 event payloads; direct S3
-to Lambda delivery is unsupported.
+configured prefix and the extensions in `SUPPORTED_DOCUMENT_EXTENSIONS` on the
+S3 notification. The handler intentionally accepts only SQS-delivered S3 event
+payloads; direct S3 to Lambda delivery is unsupported.
 
 Configure a dead-letter queue and set the Lambda visibility timeout longer than
 the largest expected document ingestion time. The handler returns a compact
