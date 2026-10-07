@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Protocol
 
 from langchain_core.documents import Document
@@ -9,6 +10,7 @@ from .document_registry import DocumentRegistry
 from .domain import DocumentStatus, IngestionResult
 from .embedding import vector_store
 from .loader import SOURCES_DIR, load_and_chunk_file
+from .storage import S3DocumentStorage
 
 
 class DocumentVectorStore(Protocol):
@@ -30,17 +32,31 @@ class DocumentIngestionService:
         self._registry = registry
         self._store = store
 
-    def ingest_source(self, source_path: str) -> IngestionResult:
-        record = self._registry.register_source(Path(source_path))
+    def ingest_source(
+        self,
+        source_path: str,
+        *,
+        source_reference: str | None = None,
+        display_name: str | None = None,
+        content_type: str | None = None,
+    ) -> IngestionResult:
+        record = self._registry.register_source(
+            Path(source_path),
+            source_reference=source_reference,
+            display_name=display_name,
+            content_type=content_type,
+        )
         if record.status is DocumentStatus.READY:
             return IngestionResult(document=record, indexed=False)
 
         target_version = record.index_version + 1
         try:
             chunks, chunk_ids = load_and_chunk_file(
-                record.source_path,
+                source_path,
                 document_id=record.document_id,
                 index_version=target_version,
+                source_uri=record.source_path,
+                display_name=record.display_name,
                 chunk_size=self._settings.chunk_size,
                 chunk_overlap=self._settings.chunk_overlap,
             )
@@ -87,6 +103,26 @@ class DocumentIngestionService:
                 )
 
         raise AssertionError("Ingestion attempts must not be empty")
+
+    def ingest_s3_object(
+        self,
+        storage: S3DocumentStorage,
+        *,
+        bucket: str,
+        key: str,
+    ) -> IngestionResult:
+        """Stream an S3 source object to a temporary file and ingest it."""
+        source = storage.get_object(bucket, key)
+        suffix = Path(source.key).suffix.lower()
+        with TemporaryDirectory(prefix="simple-rag-ingestion-") as directory:
+            temporary_path = Path(directory) / f"source{suffix}"
+            storage.download_to(source, temporary_path)
+            return self.ingest_source(
+                str(temporary_path),
+                source_reference=source.uri,
+                display_name=Path(source.key).name,
+                content_type=source.content_type,
+            )
 
     def ingest_sources(self, sources_dir: str = SOURCES_DIR) -> list[IngestionResult]:
         source_paths = sorted(

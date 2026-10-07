@@ -63,6 +63,8 @@ def load_and_chunk_file(
     *,
     document_id: str,
     index_version: int,
+    source_uri: str | None = None,
+    display_name: str | None = None,
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
     text_splitter: RecursiveCharacterTextSplitter | None = None,
@@ -77,7 +79,7 @@ def load_and_chunk_file(
         chunk_overlap=chunk_overlap,
     )
     split_chunks = splitter.split_documents(documents)
-    base_name = os.path.basename(file_path)
+    base_name = display_name or os.path.basename(file_path)
     chunks: list[Document] = []
     chunk_ids: list[str] = []
 
@@ -86,7 +88,7 @@ def load_and_chunk_file(
             **chunk.metadata,
             "document_id": document_id,
             "display_name": base_name,
-            "source": file_path,
+            "source": source_uri or file_path,
             "index_version": index_version,
             "chunk_index": index,
         }

@@ -21,6 +21,10 @@ class Settings:
     chunk_overlap: int = 200
     embedding_batch_size: int = 100
     ingestion_max_attempts: int = 2
+    s3_source_bucket: str | None = None
+    s3_source_prefix: str = ""
+    aws_region: str | None = None
+    max_document_size_bytes: int = 100 * 1024 * 1024
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -44,6 +48,12 @@ class Settings:
             chunk_overlap=_integer_env("CHUNK_OVERLAP", 200),
             embedding_batch_size=_integer_env("EMBEDDING_BATCH_SIZE", 100),
             ingestion_max_attempts=_integer_env("INGESTION_MAX_ATTEMPTS", 2),
+            s3_source_bucket=_optional_env("S3_SOURCE_BUCKET"),
+            s3_source_prefix=os.getenv("S3_SOURCE_PREFIX", ""),
+            aws_region=_optional_env("AWS_REGION"),
+            max_document_size_bytes=_integer_env(
+                "MAX_DOCUMENT_SIZE_BYTES", 100 * 1024 * 1024
+            ),
         )
         settings.validate()
         return settings
@@ -65,6 +75,8 @@ class Settings:
             raise ConfigurationError("EMBEDDING_BATCH_SIZE must be at least 1")
         if self.ingestion_max_attempts < 1:
             raise ConfigurationError("INGESTION_MAX_ATTEMPTS must be at least 1")
+        if self.max_document_size_bytes < 1:
+            raise ConfigurationError("MAX_DOCUMENT_SIZE_BYTES must be at least 1")
 
 
 def _required_env(name: str) -> str:
@@ -72,6 +84,11 @@ def _required_env(name: str) -> str:
     if not value:
         raise ConfigurationError(f"Missing required environment variable: {name}")
     return value
+
+
+def _optional_env(name: str) -> str | None:
+    value = os.getenv(name)
+    return value if value else None
 
 
 def _integer_env(name: str, default: int) -> int:
