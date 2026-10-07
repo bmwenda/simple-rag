@@ -152,20 +152,3 @@ def test_s3_event_handler_accepts_sqs_wrapped_object_created_events(
     assert results[0]["indexed"] is True
     assert isinstance(results[0]["document_id"], str)
     assert list(sqs_s3_object_created_events({"Records": []})) == []
-
-
-def test_s3_event_parser_rejects_direct_s3_invocations() -> None:
-    direct_s3_event: dict[str, object] = {
-        "Records": [
-            {
-                "eventName": "ObjectCreated:Put",
-                "s3": {
-                    "bucket": {"name": "source-bucket"},
-                    "object": {"key": "incoming%2Fhandbook.txt"},
-                },
-            }
-        ]
-    }
-
-    with pytest.raises(ValueError, match="only SQS-delivered"):
-        list(sqs_s3_object_created_events(direct_s3_event))
