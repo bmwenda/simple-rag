@@ -12,6 +12,9 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("RETRIEVAL_COUNT", "7")
     monkeypatch.setenv("RETRIEVAL_RELEVANCE_THRESHOLD", "0.65")
     monkeypatch.setenv("CHROMA_DIRECTORY", "custom-db")
+    monkeypatch.setenv("S3_SOURCE_BUCKET", "source-bucket")
+    monkeypatch.setenv("S3_SOURCE_PREFIX", "incoming")
+    monkeypatch.setenv("MAX_DOCUMENT_SIZE_BYTES", "1234")
 
     settings = Settings.from_env()
 
@@ -20,6 +23,9 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
     assert settings.retrieval_count == 7
     assert settings.retrieval_relevance_threshold == 0.65
     assert settings.chroma_directory == Path("custom-db")
+    assert settings.s3_source_bucket == "source-bucket"
+    assert settings.s3_source_prefix == "incoming"
+    assert settings.max_document_size_bytes == 1234
 
 
 def test_settings_reject_invalid_chunk_overlap() -> None:

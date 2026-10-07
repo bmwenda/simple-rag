@@ -16,18 +16,29 @@ class DocumentRegistry:
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
-    def register_source(self, source_path: Path) -> DocumentRecord:
-        source_path = source_path.resolve()
-        checksum = _checksum(source_path)
-        size_bytes = source_path.stat().st_size
+    def register_source(
+        self,
+        source_path: Path,
+        *,
+        source_reference: str | None = None,
+        display_name: str | None = None,
+        content_type: str | None = None,
+    ) -> DocumentRecord:
+        resolved_path = source_path.resolve()
+        checksum = _checksum(resolved_path)
+        size_bytes = resolved_path.stat().st_size
         content_type = (
-            mimetypes.guess_type(source_path.name)[0] or "application/octet-stream"
+            content_type
+            or mimetypes.guess_type(resolved_path.name)[0]
+            or "application/octet-stream"
         )
+        source_reference = source_reference or str(resolved_path)
+        display_name = display_name or resolved_path.name
         now = _timestamp()
 
         with self._connection() as connection:
             existing = connection.execute(
-                "SELECT * FROM documents WHERE source_path = ?", (str(source_path),)
+                "SELECT * FROM documents WHERE source_path = ?", (source_reference,)
             ).fetchone()
             if existing is None:
                 document_id = str(uuid.uuid4())
@@ -41,8 +52,8 @@ class DocumentRegistry:
                     """,
                     (
                         document_id,
-                        str(source_path),
-                        source_path.name,
+                        source_reference,
+                        display_name,
                         content_type,
                         size_bytes,
                         checksum,
@@ -68,7 +79,7 @@ class DocumentRegistry:
                 WHERE document_id = ?
                 """,
                 (
-                    source_path.name,
+                    display_name,
                     content_type,
                     size_bytes,
                     checksum,

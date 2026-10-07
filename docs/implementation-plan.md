@@ -1,7 +1,7 @@
 # RAG ingestion and citations implementation plan
 
 Status: Proposed
-Last updated: 2026-10-05
+Last updated: 2026-10-07
 
 ## 1. Purpose
 
@@ -273,6 +273,10 @@ another.
 ### Milestone 3 — S3 and background processing (P1, large)
 
 - Add local/S3 storage adapters and AWS configuration.
+- Treat the configured source bucket/prefix as an ingestion source: route S3
+  `ObjectCreated` events (directly or through SQS) to the ingestion handler,
+  validate bucket/key/size before download, and use the stable `s3://bucket/key`
+  URI as the document identity.
 - Add a minimal API for create-upload, complete-upload, status, and delete, or
   expose equivalent application-service methods if the API is deferred.
 - Upload directly with short-lived presigned URLs; use multipart above the
@@ -281,19 +285,36 @@ another.
 - Test with an S3-compatible local service or AWS test environment.
 
 Definition of done: a large file bypasses application request memory, progresses
-through visible statuses, becomes queryable, and can be completely deleted.
+through visible statuses, becomes queryable, and can be completely deleted; an
+object uploaded to the configured S3 source bucket is ingested through the
+event handler without requiring a local CLI run.
 
 ### Milestone 4 — quality and production readiness (P1/P2, medium)
 
 - Create a small, versioned RAG evaluation set with expected source documents.
 - Track retrieval recall, citation correctness, groundedness, abstention, cost,
   and latency before changing models, chunking, or search configuration.
+- Replace the document-registry data-access code with an ORM and migrate the
+  registry from SQLite to PostgreSQL. Deprecate the SQLite implementation,
+  provide a migration path for existing registry data, and test the PostgreSQL
+  integration.
+- Make ChromaDB production-ready: externalize persistence and connection
+  settings, configure collection and embedding-version management, add health
+  checks and backup/restore guidance, and document the supported deployment
+  topology and scaling limits.
+- Replace the interactive CLI with a simple browser interface modeled on
+  familiar chat applications: a primary chat/query view with cited responses
+  and a left-hand sidebar for creating, selecting, and resuming chat history.
+  Preserve the application-service boundary so the interface can call a
+  versioned HTTP API rather than embedding business logic in the UI.
 - Add structured logging/metrics, CI, dependency/security scanning, and
   production vector-store evaluation if horizontal scaling is required.
 
 Definition of done: changes can be compared against a recorded quality and
-performance baseline; operational failures are diagnosable without exposing
-internal errors to users.
+performance baseline; the registry runs on PostgreSQL through the ORM;
+ChromaDB is operable under the documented deployment model; users can query
+and resume conversations in the browser; and operational failures are
+diagnosable without exposing internal errors to users.
 
 ## 7. Recommended implementation order
 

@@ -68,6 +68,15 @@ a new index version and removes the old chunks after the replacement succeeds.
 Failures are isolated to the affected document and retried according to
 `INGESTION_MAX_ATTEMPTS`.
 
+### Ingest from an S3 source bucket
+
+Set `S3_SOURCE_BUCKET`, optionally limit it with `S3_SOURCE_PREFIX`, and deploy
+`src.s3_ingestion_handler.lambda_handler` behind an S3 object-created
+notification (or S3 to SQS to Lambda). Each event streams the object to a
+bounded temporary file and ingests it under its stable `s3://bucket/key`
+identity. See [S3 source-bucket ingestion](docs/s3-ingestion.md) for IAM,
+event, and retry guidance.
+
 ### Query Documents
 
 ```bash
