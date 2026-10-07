@@ -40,9 +40,11 @@ pull request.
 
 ## Testing
 
-List the checks that were actually run and their results. Include manual test
-steps when reviewer reproduction is useful. If testing is relevant but could
-not be performed, state that clearly with the reason.
+This section is optional. Omit automated checks that are already reported by
+GitHub Actions. Include manual test steps, environment-specific verification,
+or other reproduction guidance only when it provides useful value to the
+reviewer or user. If valuable manual testing was relevant but could not be
+performed, state that clearly with the reason.
 
 ## Artifacts
 
