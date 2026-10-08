@@ -20,14 +20,11 @@ def parse_postgres_url(raw_url: str | None) -> URL:
 
 
 def create_database_engine(database_url: URL) -> Engine:
-    connect_args = (
-        {"connect_timeout": 5}
-        if database_url.get_backend_name() == "postgresql"
-        else {}
-    )
+    if database_url.drivername != "postgresql+psycopg":
+        raise ConfigurationError("Document registry requires PostgreSQL")
     return create_engine(
         database_url,
-        connect_args=connect_args,
+        connect_args={"connect_timeout": 5},
         pool_pre_ping=True,
     )
 

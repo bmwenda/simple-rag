@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 
 from .config import Settings
 from .document_registry import DocumentRegistry
-from .domain import DocumentStatus, IngestionResult
+from .domain import DocumentRecord, DocumentStatus, IngestionResult
 from .embedding import vector_store
 from .loader import SOURCES_DIR, load_and_chunk_file
 from .storage import S3DocumentStorage
@@ -21,11 +21,32 @@ class DocumentVectorStore(Protocol):
     def delete(self, ids: list[str]) -> None: ...
 
 
+class DocumentRegistryPort(Protocol):
+    def register_source(
+        self,
+        source_path: Path,
+        *,
+        source_reference: str | None = None,
+        display_name: str | None = None,
+        content_type: str | None = None,
+    ) -> DocumentRecord: ...
+
+    def mark_processing(self, document_id: str) -> DocumentRecord: ...
+
+    def mark_retry(self, document_id: str) -> DocumentRecord: ...
+
+    def mark_ready(
+        self, document_id: str, *, index_version: int, chunk_count: int
+    ) -> DocumentRecord: ...
+
+    def mark_failed(self, document_id: str, error: Exception) -> DocumentRecord: ...
+
+
 class DocumentIngestionService:
     def __init__(
         self,
         settings: Settings,
-        registry: DocumentRegistry,
+        registry: DocumentRegistryPort,
         store: DocumentVectorStore,
     ) -> None:
         self._settings = settings

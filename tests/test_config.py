@@ -6,7 +6,7 @@ from sqlalchemy.engine import URL
 from src.config import Settings
 from src.domain import ConfigurationError
 
-TEST_DATABASE_URL = URL.create("sqlite+pysqlite", database=":memory:")
+TEST_DATABASE_URL = URL.create("postgresql+psycopg", database="test")
 
 
 def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) -> None:

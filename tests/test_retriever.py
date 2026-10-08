@@ -38,7 +38,7 @@ def settings(*, threshold: float = 0.2, count: int = 4) -> Settings:
     return Settings(
         openai_api_key="test-key",
         openai_model="test-model",
-        database_url=URL.create("sqlite+pysqlite", database=":memory:"),
+        database_url=URL.create("postgresql+psycopg", database="test"),
         retrieval_count=count,
         retrieval_relevance_threshold=threshold,
     )

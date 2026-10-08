@@ -4,9 +4,9 @@ from langchain_core.documents import Document
 from sqlalchemy.engine import URL
 
 from src.config import Settings
-from src.document_registry import DocumentRegistry
 from src.domain import DocumentStatus
 from src.ingestion import DocumentIngestionService
+from tests.fakes import FakeDocumentRegistry
 
 
 class FakeVectorStore:
@@ -32,13 +32,11 @@ class FakeVectorStore:
         self.delete_calls.append(ids)
 
 
-def make_settings(tmp_path: Path, **overrides: object) -> Settings:
+def make_settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "openai_api_key": "test-key",
         "openai_model": "test-model",
-        "database_url": URL.create(
-            "sqlite+pysqlite", database=str(tmp_path / "documents.sqlite3")
-        ),
+        "database_url": URL.create("postgresql+psycopg", database="test"),
         "chunk_size": 20,
         "chunk_overlap": 0,
         "embedding_batch_size": 100,
@@ -49,12 +47,11 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
 
 
 def make_service(
-    tmp_path: Path,
     store: FakeVectorStore,
     **settings_overrides: object,
-) -> tuple[DocumentIngestionService, DocumentRegistry]:
-    settings = make_settings(tmp_path, **settings_overrides)
-    registry = DocumentRegistry(settings.database_url)
+) -> tuple[DocumentIngestionService, FakeDocumentRegistry]:
+    settings = make_settings(**settings_overrides)
+    registry = FakeDocumentRegistry()
     return DocumentIngestionService(settings, registry, store), registry
 
 
@@ -67,7 +64,7 @@ def write_source(tmp_path: Path, name: str, content: str) -> Path:
 def test_ingest_source_creates_ready_versioned_document(tmp_path: Path) -> None:
     source = write_source(tmp_path, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore()
-    service, registry = make_service(tmp_path, store)
+    service, registry = make_service(store)
 
     result = service.ingest_source(str(source))
 
@@ -88,7 +85,7 @@ def test_ingest_source_creates_ready_versioned_document(tmp_path: Path) -> None:
 def test_ingest_source_skips_unchanged_ready_document(tmp_path: Path) -> None:
     source = write_source(tmp_path, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore()
-    service, _ = make_service(tmp_path, store)
+    service, _ = make_service(store)
 
     first = service.ingest_source(str(source))
     second = service.ingest_source(str(source))
@@ -104,7 +101,7 @@ def test_ingest_source_replaces_changed_version_and_deletes_old_chunks(
 ) -> None:
     source = write_source(tmp_path, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore()
-    service, _ = make_service(tmp_path, store)
+    service, _ = make_service(store)
     first = service.ingest_source(str(source))
     source.write_text("updated handbook content", encoding="utf-8")
 
@@ -125,7 +122,7 @@ def test_ingest_source_replaces_changed_version_and_deletes_old_chunks(
 def test_ingest_source_retries_transient_vector_failure(tmp_path: Path) -> None:
     source = write_source(tmp_path, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore(fail_on_add_calls={1})
-    service, _ = make_service(tmp_path, store)
+    service, _ = make_service(store)
 
     result = service.ingest_source(str(source))
 
@@ -141,7 +138,6 @@ def test_ingest_source_cleans_partial_new_version_when_retries_are_exhausted(
     source = write_source(tmp_path, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore(fail_on_add_calls={2})
     service, _ = make_service(
-        tmp_path,
         store,
         embedding_batch_size=1,
         ingestion_max_attempts=1,
@@ -166,7 +162,7 @@ def test_ingest_sources_isolates_failed_documents(tmp_path: Path) -> None:
     write_source(sources_dir, "broken.bin", "not supported")
     write_source(sources_dir, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore()
-    service, _ = make_service(tmp_path, store)
+    service, _ = make_service(store)
 
     results = service.ingest_sources(str(sources_dir))
 

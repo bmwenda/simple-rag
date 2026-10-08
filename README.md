@@ -53,7 +53,7 @@ tasks are maintained in the [product and delivery specification](docs/specificat
 
    Create the PostgreSQL database and account before ingestion. See
    `.env.example` for optional embedding, Chroma, retrieval, and chunking
-   settings. Existing local SQLite registry data is not transferred.
+   settings. Old local SQLite registry files are not used or transferred.
 
 4. **Add documents:**
    Place supported documents, such as PDF, text, Markdown, HTML, or Office
