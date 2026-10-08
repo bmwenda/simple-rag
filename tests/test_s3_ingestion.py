@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from langchain_core.documents import Document
 from sqlalchemy.engine import URL
 
 from src.config import Settings
-from src.document_registry import DocumentRegistry
 from src.domain import DocumentStatus
 from src.ingestion import DocumentIngestionService
 from src.s3_events import sqs_s3_object_created_events
 from src.s3_ingestion_handler import S3IngestionHandler
 from src.storage import S3DocumentStorage
+from tests.fakes import FakeDocumentRegistry
 
 
 class FakeVectorStore:
@@ -46,22 +44,19 @@ class FakeS3Client:
 
 
 def make_s3_service(
-    tmp_path: Path,
     client: FakeS3Client,
     *,
     max_document_size_bytes: int = 1000,
-) -> tuple[DocumentIngestionService, DocumentRegistry, S3DocumentStorage]:
+) -> tuple[DocumentIngestionService, FakeDocumentRegistry, S3DocumentStorage]:
     settings = Settings(
         openai_api_key="test-key",
         openai_model="test-model",
-        database_url=URL.create(
-            "sqlite+pysqlite", database=str(tmp_path / "documents.sqlite3")
-        ),
+        database_url=URL.create("postgresql+psycopg", database="test"),
         chunk_size=20,
         chunk_overlap=0,
         max_document_size_bytes=max_document_size_bytes,
     )
-    registry = DocumentRegistry(settings.database_url)
+    registry = FakeDocumentRegistry()
     return (
         DocumentIngestionService(settings, registry, FakeVectorStore()),
         registry,
@@ -74,13 +69,11 @@ def make_s3_service(
     )
 
 
-def test_ingest_s3_object_uses_stable_s3_identity_and_removes_temp_file(
-    tmp_path: Path,
-) -> None:
+def test_ingest_s3_object_uses_stable_s3_identity_and_removes_temp_file() -> None:
     client = FakeS3Client(
         {("source-bucket", "incoming/leave policy.txt"): b"annual leave details"}
     )
-    service, registry, storage = make_s3_service(tmp_path, client)
+    service, registry, storage = make_s3_service(client)
 
     first = service.ingest_s3_object(
         storage,
@@ -105,11 +98,9 @@ def test_ingest_s3_object_uses_stable_s3_identity_and_removes_temp_file(
     ]
 
 
-def test_s3_storage_rejects_objects_outside_the_configured_source_scope(
-    tmp_path: Path,
-) -> None:
+def test_s3_storage_rejects_objects_outside_the_configured_source_scope() -> None:
     client = FakeS3Client({("source-bucket", "incoming/large.txt"): b"x" * 11})
-    _, _, storage = make_s3_service(tmp_path, client, max_document_size_bytes=10)
+    _, _, storage = make_s3_service(client, max_document_size_bytes=10)
 
     with pytest.raises(ValueError, match="MAX_DOCUMENT_SIZE_BYTES"):
         storage.get_object("source-bucket", "incoming/large.txt")
@@ -119,22 +110,20 @@ def test_s3_storage_rejects_objects_outside_the_configured_source_scope(
         storage.get_object("another-bucket", "incoming/document.txt")
 
 
-def test_s3_storage_allows_markdown_sources(tmp_path: Path) -> None:
+def test_s3_storage_allows_markdown_sources() -> None:
     client = FakeS3Client({("source-bucket", "incoming/handbook.md"): b"# Handbook"})
-    _, _, storage = make_s3_service(tmp_path, client)
+    _, _, storage = make_s3_service(client)
 
     source = storage.get_object("source-bucket", "incoming/handbook.md")
 
     assert source.content_type == "text/plain"
 
 
-def test_s3_event_handler_accepts_sqs_wrapped_object_created_events(
-    tmp_path: Path,
-) -> None:
+def test_s3_event_handler_accepts_sqs_wrapped_object_created_events() -> None:
     client = FakeS3Client(
         {("source-bucket", "incoming/handbook.txt"): b"handbook content"}
     )
-    service, _, storage = make_s3_service(tmp_path, client)
+    service, _, storage = make_s3_service(client)
     handler = S3IngestionHandler(service, storage)
     event: dict[str, object] = {
         "Records": [

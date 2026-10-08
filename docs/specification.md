@@ -20,9 +20,9 @@ it can be delivered and reviewed independently.
   `src/document_types.py`, including PDF, plain text, Markdown, HTML, common
   Office formats, and structured text formats.
 - The local CLI remains the query interface until the web interface is delivered.
-- Runtime ingestion configures the document registry with PostgreSQL. SQLite
-  is used only for isolated unit tests; concurrent job claims are not yet in
-  place.
+- Runtime and local ingestion use PostgreSQL as the sole document-registry
+  backend. Unit tests mock the registry or engine boundary; concurrent job
+  claims are not yet in place.
 - Chroma uses a local persistent directory; it has not been configured as a
   horizontally scalable production service.
 - S3 events must flow through SQS to Lambda. Direct S3-to-Lambda invocation is
@@ -117,7 +117,8 @@ operable without direct S3-to-Lambda delivery or manual local ingestion.
   Existing local SQLite test data is not migrated.
 - [ ] Use transactional job claims and leases so multiple workers cannot index
   the same document version concurrently.
-- [ ] Deprecate SQLite for hosted deployments and local development.
+- [x] Remove SQLite as a registry backend for hosted and local development;
+  unit tests use fakes or mocks instead of SQLite databases.
 - [ ] Add PostgreSQL-backed integration tests for idempotency, concurrent job
   claims, retry behavior, startup validation, and health checks.
 

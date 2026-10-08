@@ -1,70 +1,97 @@
-import sqlite3
-from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import OperationalError
 
 import healthcheck
-from src.database import check_database_health
+from src.database import check_database_health, create_database_engine
 from src.document_registry import DocumentRegistry
 from src.domain import ConfigurationError
 
-
-def test_registry_startup_initializes_schema_and_health_query(tmp_path: Path) -> None:
-    database_url = URL.create(
-        "sqlite+pysqlite", database=str(tmp_path / "registry.sqlite3")
-    )
-
-    DocumentRegistry(database_url)
-    check_database_health(database_url)
-
-    engine = create_engine(database_url)
-    try:
-        assert inspect(engine).has_table("documents")
-    finally:
-        engine.dispose()
+TEST_DATABASE_URL = URL.create("postgresql+psycopg", database="registry")
 
 
-def test_registry_startup_sanitizes_connection_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fail_engine(_database_url: URL) -> None:
-        raise OperationalError("connect", {}, Exception("password=topsecret"))
+def test_registry_startup_probes_connection_and_schema() -> None:
+    engine = MagicMock()
+    connection = engine.begin.return_value.__enter__.return_value
 
-    monkeypatch.setattr("src.document_repository.create_database_engine", fail_engine)
-    database_url = URL.create("postgresql+psycopg", database="registry")
+    with (
+        patch(
+            "src.document_repository.create_database_engine", return_value=engine
+        ),
+        patch("src.document_repository.Base.metadata.create_all") as create_all,
+    ):
+        DocumentRegistry(TEST_DATABASE_URL)
 
-    with pytest.raises(ConfigurationError, match="cannot be initialized") as error:
-        DocumentRegistry(database_url)
-
-    assert "topsecret" not in str(error.value)
-
-
-def test_registry_startup_rejects_incompatible_schema(tmp_path: Path) -> None:
-    database_path = tmp_path / "registry.sqlite3"
-    with sqlite3.connect(database_path) as connection:
-        connection.execute("CREATE TABLE documents (document_id TEXT PRIMARY KEY)")
-    database_url = URL.create("sqlite+pysqlite", database=str(database_path))
-
-    with pytest.raises(ConfigurationError, match="cannot be initialized"):
-        DocumentRegistry(database_url)
+    create_all.assert_called_once_with(connection)
+    assert connection.execute.call_count == 2
+    statements = [str(call.args[0]) for call in connection.execute.call_args_list]
+    assert statements[0] == "SELECT 1"
+    assert "FROM documents" in statements[1]
 
 
-def test_database_health_sanitizes_connection_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fail_engine(_database_url: URL) -> None:
-        raise OperationalError("connect", {}, Exception("password=topsecret"))
+def test_registry_startup_sanitizes_connection_failure() -> None:
+    error = OperationalError("connect", {}, Exception("password=topsecret"))
 
-    monkeypatch.setattr("src.database.create_database_engine", fail_engine)
-    database_url = URL.create("postgresql+psycopg", database="registry")
+    with (
+        patch("src.document_repository.create_database_engine", side_effect=error),
+        pytest.raises(ConfigurationError, match="cannot be initialized") as caught,
+    ):
+        DocumentRegistry(TEST_DATABASE_URL)
 
-    with pytest.raises(ConfigurationError, match="database is unavailable") as error:
-        check_database_health(database_url)
+    assert "topsecret" not in str(caught.value)
 
-    assert "topsecret" not in str(error.value)
+
+def test_registry_startup_rejects_incompatible_schema() -> None:
+    engine = MagicMock()
+    connection = engine.begin.return_value.__enter__.return_value
+    connection.execute.side_effect = [
+        MagicMock(),
+        OperationalError("schema", {}, Exception("missing column")),
+    ]
+
+    with (
+        patch(
+            "src.document_repository.create_database_engine", return_value=engine
+        ),
+        patch("src.document_repository.Base.metadata.create_all"),
+        pytest.raises(ConfigurationError, match="cannot be initialized"),
+    ):
+        DocumentRegistry(TEST_DATABASE_URL)
+
+    engine.dispose.assert_called_once()
+
+
+def test_database_health_probes_and_disposes_engine() -> None:
+    engine = MagicMock()
+    connection = engine.connect.return_value.__enter__.return_value
+
+    with patch("src.database.create_database_engine", return_value=engine):
+        check_database_health(TEST_DATABASE_URL)
+
+    connection.execute.assert_called_once()
+    assert str(connection.execute.call_args.args[0]) == "SELECT 1"
+    engine.dispose.assert_called_once()
+
+
+def test_database_health_sanitizes_connection_failure() -> None:
+    error = OperationalError("connect", {}, Exception("password=topsecret"))
+
+    with (
+        patch("src.database.create_database_engine", side_effect=error),
+        pytest.raises(ConfigurationError, match="database is unavailable") as caught,
+    ):
+        check_database_health(TEST_DATABASE_URL)
+
+    assert "topsecret" not in str(caught.value)
+
+
+def test_database_engine_rejects_sqlite_url() -> None:
+    unsupported_url = URL.create("sqlite+pysqlite", database=":memory:")
+
+    with pytest.raises(ConfigurationError, match="requires PostgreSQL"):
+        create_database_engine(unsupported_url)
 
 
 def test_healthcheck_command_reports_failure_without_credentials(
@@ -85,14 +112,15 @@ def test_healthcheck_command_reports_failure_without_credentials(
 
 
 def test_healthcheck_command_reports_success(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    database_url = URL.create(
-        "sqlite+pysqlite", database=str(tmp_path / "registry.sqlite3")
+    monkeypatch.setattr(
+        healthcheck, "database_url_from_env", lambda: TEST_DATABASE_URL
     )
-    monkeypatch.setattr(healthcheck, "database_url_from_env", lambda: database_url)
+    probe = MagicMock()
+    monkeypatch.setattr(healthcheck, "check_database_health", probe)
 
     assert healthcheck.main() == 0
+    probe.assert_called_once_with(TEST_DATABASE_URL)
     assert capsys.readouterr().out == "Database healthy\n"
