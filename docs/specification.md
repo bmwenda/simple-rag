@@ -109,11 +109,12 @@ operable without direct S3-to-Lambda delivery or manual local ingestion.
 
 ### P1 — migrate the document registry to PostgreSQL
 
-- [ ] Select an ORM and migration tool, and model documents, ingestion jobs,
-  attempts, leases, and ownership boundaries.
+- [x] Select SQLAlchemy and Alembic for ORM persistence and schema migrations.
+- [ ] Model ingestion jobs, attempts, leases, and ownership boundaries.
 - [x] Replace direct registry storage access in `DocumentRegistry` with
   repository code backed by the ORM.
 - [x] Add PostgreSQL configuration, startup validation, and health checks.
+- [x] Manage the registry schema with Alembic migrations.
 - [ ] Use transactional job claims and leases so multiple workers cannot index
   the same document version concurrently.
 - [x] Use PostgreSQL for the registry in hosted and local development;
