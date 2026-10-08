@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy.engine import URL
 
-from .database import parse_postgres_url
+from .database import parse_database_url
 from .domain import ConfigurationError
 
 
@@ -81,7 +81,7 @@ class Settings:
 
 def database_url_from_env() -> URL:
     load_dotenv()
-    return parse_postgres_url(os.getenv("DATABASE_URL"))
+    return parse_database_url(os.getenv("DATABASE_URL"))
 
 
 def _required_env(name: str) -> str:

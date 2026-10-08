@@ -1,4 +1,4 @@
-"""Database URL validation, connection setup, and health probing."""
+"""Database URL parsing, connection setup, and health probing."""
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Engine, make_url
@@ -7,21 +7,19 @@ from sqlalchemy.exc import SQLAlchemyError
 from .domain import ConfigurationError
 
 
-def parse_postgres_url(raw_url: str | None) -> URL:
+def parse_database_url(raw_url: str | None) -> URL:
     if not raw_url:
         raise ConfigurationError("DATABASE_URL is required")
     try:
         url = make_url(raw_url)
     except (SQLAlchemyError, ValueError):
-        raise ConfigurationError("DATABASE_URL must be a valid PostgreSQL URL") from None
-    if url.drivername not in {"postgresql", "postgresql+psycopg"} or not url.database:
-        raise ConfigurationError("DATABASE_URL must be a PostgreSQL URL")
-    return url.set(drivername="postgresql+psycopg")
+        raise ConfigurationError("DATABASE_URL is invalid") from None
+    if url.drivername == "postgresql":
+        return url.set(drivername="postgresql+psycopg")
+    return url
 
 
 def create_database_engine(database_url: URL) -> Engine:
-    if database_url.drivername != "postgresql+psycopg":
-        raise ConfigurationError("Document registry requires PostgreSQL")
     return create_engine(
         database_url,
         connect_args={"connect_timeout": 5},
