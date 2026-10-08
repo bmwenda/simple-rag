@@ -6,8 +6,9 @@ This is a Python 3.10–3.13 RAG application managed with `uv`. Runtime code is
 under `src/`: loaders and document-type validation, ingestion and storage,
 retrieval, chat, configuration, and S3/SQS event handling. The CLI entry points
 are `main.py` (querying) and `ingest_sources.py` (local ingestion). Tests live
-in `tests/` and mirror the runtime modules. Sample input documents are in
-`sources/`; design and operational notes are in `docs/`. Keep new provider or
+in `tests/` and mirror the runtime modules. Local input documents are in the
+ignored `sources/` directory (configurable with `SOURCES_DIRECTORY`); design
+and operational notes are in `docs/`. Keep new provider or
 domain logic in `src/` rather than in entry-point scripts.
 
 ## Build, Test, and Development Commands

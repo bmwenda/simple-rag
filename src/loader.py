@@ -12,9 +12,8 @@ from langchain_core.documents import Document
 from langchain_docling.loader import DoclingLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from .config import sources_directory_from_env
 from .document_types import is_supported_document
-
-SOURCES_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "sources"))
 
 
 def _load_file(file_path: str) -> list[Document]:
@@ -25,7 +24,7 @@ def _load_file(file_path: str) -> list[Document]:
 
 
 def load_and_chunk_sources(
-    sources_dir: str = SOURCES_DIR,
+    sources_dir: str | None = None,
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
 ) -> tuple[list[Document], list[str], list[str]]:
@@ -34,9 +33,10 @@ def load_and_chunk_sources(
         chunk_overlap=chunk_overlap,
     )
 
+    directory = sources_dir if sources_dir is not None else sources_directory_from_env()
     file_paths = sorted(
         path
-        for path in glob.glob(os.path.join(sources_dir, "*"))
+        for path in glob.glob(os.path.join(directory, "*"))
         if os.path.isfile(path)
     )
 

@@ -8,12 +8,16 @@ from sqlalchemy.engine import URL
 from .database import parse_database_url
 from .domain import ConfigurationError
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_SOURCES_DIRECTORY = PROJECT_ROOT / "sources"
+
 
 @dataclass(frozen=True)
 class Settings:
     openai_api_key: str = field(repr=False)
     openai_model: str
     database_url: URL = field(repr=False)
+    sources_directory: Path = DEFAULT_SOURCES_DIRECTORY
     embedding_model: str = "text-embedding-3-large"
     chroma_collection: str = "rag-documents"
     chroma_directory: Path = Path("chroma_db")
@@ -35,6 +39,7 @@ class Settings:
             openai_api_key=_required_env("OPENAI_API_KEY"),
             openai_model=_required_env("OPENAI_MODEL"),
             database_url=database_url_from_env(),
+            sources_directory=sources_directory_from_env(),
             embedding_model=os.getenv(
                 "OPENAI_EMBEDDING_MODEL", "text-embedding-3-large"
             ),
@@ -77,6 +82,12 @@ class Settings:
             raise ConfigurationError("INGESTION_MAX_ATTEMPTS must be at least 1")
         if self.max_document_size_bytes < 1:
             raise ConfigurationError("MAX_DOCUMENT_SIZE_BYTES must be at least 1")
+
+
+def sources_directory_from_env() -> Path:
+    load_dotenv()
+    directory = Path(os.getenv("SOURCES_DIRECTORY", "sources"))
+    return directory if directory.is_absolute() else PROJECT_ROOT / directory
 
 
 def database_url_from_env() -> URL:

@@ -12,6 +12,9 @@ wheels/
 # Local credentials
 .env
 
+# Local ingestion documents
+/sources/
+
 # Chroma files
 chroma_db/
 chroma

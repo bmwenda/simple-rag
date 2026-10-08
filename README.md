@@ -61,8 +61,16 @@ tasks are maintained in the [product and delivery specification](docs/specificat
    ```
 
 4. **Add documents:**
+   Create the local source directory:
+   ```bash
+   mkdir -p sources
+   ```
    Place supported documents, such as PDF, text, Markdown, HTML, or Office
-   files, in the `sources/` folder
+   files, in the `sources/` folder. These files are local inputs and are ignored
+   by Git. Set `SOURCES_DIRECTORY` in `.env` to use another directory; relative
+   paths are resolved from the project root, and absolute paths are supported.
+   Create the configured directory before ingestion. If a custom directory is
+   inside the repository, add it to `.git/info/exclude` to keep it local.
 
 5. **Ingest documents:**
    ```bash
