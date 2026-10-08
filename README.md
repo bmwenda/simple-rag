@@ -51,13 +51,13 @@ tasks are maintained in the [product and delivery specification](docs/specificat
    DATABASE_URL=postgresql+psycopg://rag_user:change_me@localhost:5432/simple_rag
    ```
 
-   Create the PostgreSQL database and account before ingestion. See
-   `.env.example` for optional embedding, Chroma, retrieval, and chunking
-   settings.
+   For local development, use a PostgreSQL role with permission to create
+   databases. See `.env.example` for optional embedding, Chroma, retrieval, and
+   chunking settings.
 
-   Create or update the registry schema with Alembic:
+   Prepare the local database and apply pending schema migrations:
    ```bash
-   uv run alembic upgrade head
+   uv run db prepare
    ```
 
 4. **Add documents:**
@@ -84,12 +84,19 @@ succeeds.
 Failures are isolated to the affected document and retried according to
 `INGESTION_MAX_ATTEMPTS`.
 
+The `db` command provides local development tasks: `uv run db create` creates
+the configured database, `uv run db migrate` applies pending Alembic migrations,
+and `uv run db drop` asks for the database name before dropping it.
+`uv run db prepare` creates the database if needed and applies migrations.
+These commands require a local PostgreSQL URL; the role must have permission
+to create or drop the database when using those commands. For an existing
+database whose schema already matches the initial migration, run
+`uv run alembic stamp head` once to establish its migration baseline. To
+inspect the migration version, run `uv run alembic current`.
+
 Before ingestion, the registry connects to PostgreSQL and checks that its
-document table has the expected columns. Schema changes are applied with
-Alembic. For an existing database whose schema already matches the initial
-migration, run `uv run alembic stamp head` to establish its migration baseline.
-To inspect the migration version, run `uv run alembic current`. To probe
-database connectivity without an OpenAI key, run
+document table has the expected columns. To probe database connectivity without
+an OpenAI key, run
 `uv run python healthcheck.py`; it exits nonzero if the database query fails.
 
 ### Ingest from an S3 source bucket
