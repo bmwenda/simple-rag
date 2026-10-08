@@ -1,8 +1,42 @@
+import json
 from pathlib import Path
 
+from chromadb.api.types import validate_metadata
 from langchain_core.documents import Document
 
 from src import loader
+
+
+def test_docling_nested_metadata_is_preserved_and_accepted_by_chroma(
+    monkeypatch,
+) -> None:
+    docling_metadata = {
+        "schema_name": "docling_core.transforms.chunker.DocMeta",
+        "doc_items": [{"self_ref": "#/texts/0", "prov": [{"page_no": 1}]}],
+        "origin": {"filename": "policies.txt", "mimetype": "text/markdown"},
+    }
+    monkeypatch.setattr(
+        loader,
+        "_load_file",
+        lambda path: [
+            Document(
+                page_content="Leave policy details",
+                metadata={"dl_meta": docling_metadata, "page": 0},
+            )
+        ],
+    )
+
+    chunks, _ = loader.load_and_chunk_file(
+        "policies.txt", document_id="policy", index_version=1
+    )
+
+    metadata = chunks[0].metadata
+    validate_metadata(metadata)
+    assert json.loads(metadata["dl_meta"]) == docling_metadata
+    assert metadata["document_id"] == "policy"
+    assert metadata["source"] == "policies.txt"
+    assert metadata["page_number"] == 1
+    assert metadata["index_version"] == 1
 
 
 def test_load_and_chunk_sources_preserves_loader_metadata(

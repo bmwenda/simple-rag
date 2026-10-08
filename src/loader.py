@@ -1,4 +1,5 @@
 import glob
+import json
 import logging
 import os
 
@@ -89,7 +90,12 @@ def load_and_chunk_file(
 
     for index, chunk in enumerate(split_chunks):
         metadata = {
-            **chunk.metadata,
+            **{
+                key: json.dumps(value)
+                if isinstance(value, (dict, list, tuple))
+                else value
+                for key, value in chunk.metadata.items()
+            },
             "document_id": document_id,
             "display_name": base_name,
             "source": source_uri or file_path,
