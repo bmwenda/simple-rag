@@ -9,7 +9,7 @@ from .config import Settings
 from .document_registry import DocumentRegistry
 from .domain import DocumentRecord, DocumentStatus, IngestionResult
 from .embedding import vector_store
-from .loader import SOURCES_DIR, load_and_chunk_file
+from .loader import load_and_chunk_file
 from .storage import S3DocumentStorage
 
 
@@ -145,10 +145,17 @@ class DocumentIngestionService:
                 content_type=source.content_type,
             )
 
-    def ingest_sources(self, sources_dir: str = SOURCES_DIR) -> list[IngestionResult]:
+    def ingest_sources(
+        self, sources_dir: str | Path | None = None
+    ) -> list[IngestionResult]:
+        directory = (
+            Path(sources_dir)
+            if sources_dir is not None
+            else self._settings.sources_directory
+        )
         source_paths = sorted(
             source_path
-            for source_path in Path(sources_dir).iterdir()
+            for source_path in directory.iterdir()
             if source_path.is_file()
         )
         return [self.ingest_source(str(source_path)) for source_path in source_paths]

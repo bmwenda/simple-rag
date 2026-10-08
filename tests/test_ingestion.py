@@ -162,9 +162,9 @@ def test_ingest_sources_isolates_failed_documents(tmp_path: Path) -> None:
     write_source(sources_dir, "broken.bin", "not supported")
     write_source(sources_dir, "handbook.txt", "annual leave policy details")
     store = FakeVectorStore()
-    service, _ = make_service(store)
+    service, _ = make_service(store, sources_directory=sources_dir)
 
-    results = service.ingest_sources(str(sources_dir))
+    results = service.ingest_sources()
 
     assert [
         (result.document.display_name, result.document.status) for result in results

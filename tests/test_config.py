@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.engine import URL
 
-from src.config import Settings
+from src.config import PROJECT_ROOT, Settings
 from src.domain import ConfigurationError
 
 TEST_DATABASE_URL = URL.create("postgresql+psycopg", database="test")
@@ -18,6 +18,7 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("RETRIEVAL_COUNT", "7")
     monkeypatch.setenv("RETRIEVAL_RELEVANCE_THRESHOLD", "0.65")
     monkeypatch.setenv("CHROMA_DIRECTORY", "custom-db")
+    monkeypatch.setenv("SOURCES_DIRECTORY", "local-documents")
     monkeypatch.setenv("S3_SOURCE_BUCKET", "source-bucket")
     monkeypatch.setenv("S3_SOURCE_PREFIX", "incoming")
     monkeypatch.setenv("MAX_DOCUMENT_SIZE_BYTES", "1234")
@@ -32,6 +33,7 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
     assert settings.retrieval_count == 7
     assert settings.retrieval_relevance_threshold == 0.65
     assert settings.chroma_directory == Path("custom-db")
+    assert settings.sources_directory == PROJECT_ROOT / "local-documents"
     assert settings.s3_source_bucket == "source-bucket"
     assert settings.s3_source_prefix == "incoming"
     assert settings.max_document_size_bytes == 1234
