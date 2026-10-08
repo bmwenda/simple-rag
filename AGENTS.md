@@ -49,6 +49,11 @@ review, project status, branching, verification, and pull-request handoff.
 Use `skills/gitlab-commit/SKILL.md` and `skills/pull-request/SKILL.md` for the
 commit and PR steps it requires.
 
+Never edit, stage, commit, or push changes directly on `master`. The project
+uses feature branches and `master` is protected. Create or switch to an
+issue-specific feature branch before making changes, and merge through a pull
+request.
+
 Use an imperative, capitalized commit subject of at least three words and no
 more than 72 characters, without a trailing period (for example, `Add S3
 ingestion tests`). Add a wrapped body when context is useful. Pull requests
