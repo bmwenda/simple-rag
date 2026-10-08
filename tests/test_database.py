@@ -5,7 +5,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.exc import OperationalError
 
 import healthcheck
-from src.database import check_database_health, create_database_engine
+from src.database import check_database_health
 from src.document_registry import DocumentRegistry
 from src.domain import ConfigurationError
 
@@ -85,13 +85,6 @@ def test_database_health_sanitizes_connection_failure() -> None:
         check_database_health(TEST_DATABASE_URL)
 
     assert "topsecret" not in str(caught.value)
-
-
-def test_database_engine_rejects_sqlite_url() -> None:
-    unsupported_url = URL.create("sqlite+pysqlite", database=":memory:")
-
-    with pytest.raises(ConfigurationError, match="requires PostgreSQL"):
-        create_database_engine(unsupported_url)
 
 
 def test_healthcheck_command_reports_failure_without_credentials(

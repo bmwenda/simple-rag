@@ -111,14 +111,13 @@ operable without direct S3-to-Lambda delivery or manual local ingestion.
 
 - [ ] Select an ORM and migration tool, and model documents, ingestion jobs,
   attempts, leases, and ownership boundaries.
-- [x] Replace direct SQLite access in `DocumentRegistry` with repository code
-  backed by the ORM.
+- [x] Replace direct registry storage access in `DocumentRegistry` with
+  repository code backed by the ORM.
 - [x] Add PostgreSQL configuration, startup validation, and health checks.
-  Existing local SQLite test data is not migrated.
 - [ ] Use transactional job claims and leases so multiple workers cannot index
   the same document version concurrently.
-- [x] Remove SQLite as a registry backend for hosted and local development;
-  unit tests use fakes or mocks instead of SQLite databases.
+- [x] Use PostgreSQL for the registry in hosted and local development;
+  unit tests use fakes or mocks instead of a database.
 - [ ] Add PostgreSQL-backed integration tests for idempotency, concurrent job
   claims, retry behavior, startup validation, and health checks.
 

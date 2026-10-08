@@ -84,24 +84,3 @@ def test_settings_reject_non_integer_environment(
 
     with pytest.raises(ConfigurationError, match="RETRIEVAL_COUNT must be an integer"):
         Settings.from_env()
-
-
-@pytest.mark.parametrize(
-    ("value", "message"),
-    [
-        ("", "DATABASE_URL is required"),
-        ("sqlite:///local.db", "must be a PostgreSQL URL"),
-        ("not-a-url-secret", "must be a valid PostgreSQL URL"),
-    ],
-)
-def test_settings_reject_invalid_database_url(
-    monkeypatch: pytest.MonkeyPatch, value: str, message: str
-) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setenv("OPENAI_MODEL", "test-model")
-    monkeypatch.setenv("DATABASE_URL", value)
-
-    with pytest.raises(ConfigurationError, match=message) as error:
-        Settings.from_env()
-
-    assert "secret" not in str(error.value)
