@@ -1,14 +1,20 @@
 from pathlib import Path
 
 import pytest
+from sqlalchemy.engine import URL
 
 from src.config import Settings
 from src.domain import ConfigurationError
+
+TEST_DATABASE_URL = URL.create("sqlite+pysqlite", database=":memory:")
 
 
 def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql://app:secret@localhost:5432/simple_rag"
+    )
     monkeypatch.setenv("RETRIEVAL_COUNT", "7")
     monkeypatch.setenv("RETRIEVAL_RELEVANCE_THRESHOLD", "0.65")
     monkeypatch.setenv("CHROMA_DIRECTORY", "custom-db")
@@ -20,6 +26,9 @@ def test_settings_load_and_convert_environment(monkeypatch: pytest.MonkeyPatch) 
 
     assert settings.openai_api_key == "test-key"
     assert settings.openai_model == "test-model"
+    assert settings.database_url.drivername == "postgresql+psycopg"
+    assert settings.database_url.database == "simple_rag"
+    assert "secret" not in repr(settings)
     assert settings.retrieval_count == 7
     assert settings.retrieval_relevance_threshold == 0.65
     assert settings.chroma_directory == Path("custom-db")
@@ -32,6 +41,7 @@ def test_settings_reject_invalid_chunk_overlap() -> None:
     settings = Settings(
         openai_api_key="test-key",
         openai_model="test-model",
+        database_url=TEST_DATABASE_URL,
         chunk_size=100,
         chunk_overlap=100,
     )
@@ -44,6 +54,7 @@ def test_settings_reject_invalid_relevance_threshold() -> None:
     settings = Settings(
         openai_api_key="test-key",
         openai_model="test-model",
+        database_url=TEST_DATABASE_URL,
         retrieval_relevance_threshold=1.1,
     )
 
@@ -55,6 +66,7 @@ def test_settings_reject_invalid_ingestion_configuration() -> None:
     settings = Settings(
         openai_api_key="test-key",
         openai_model="test-model",
+        database_url=TEST_DATABASE_URL,
         embedding_batch_size=0,
     )
 
@@ -67,7 +79,29 @@ def test_settings_reject_non_integer_environment(
 ) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/test")
     monkeypatch.setenv("RETRIEVAL_COUNT", "many")
 
     with pytest.raises(ConfigurationError, match="RETRIEVAL_COUNT must be an integer"):
         Settings.from_env()
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ("", "DATABASE_URL is required"),
+        ("sqlite:///local.db", "must be a PostgreSQL URL"),
+        ("not-a-url-secret", "must be a valid PostgreSQL URL"),
+    ],
+)
+def test_settings_reject_invalid_database_url(
+    monkeypatch: pytest.MonkeyPatch, value: str, message: str
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("DATABASE_URL", value)
+
+    with pytest.raises(ConfigurationError, match=message) as error:
+        Settings.from_env()
+
+    assert "secret" not in str(error.value)

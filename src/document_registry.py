@@ -2,6 +2,8 @@ import hashlib
 import mimetypes
 from pathlib import Path
 
+from sqlalchemy.engine import URL
+
 from .document_repository import DocumentRepository
 from .domain import DocumentRecord, DocumentStatus
 
@@ -9,8 +11,8 @@ from .domain import DocumentRecord, DocumentStatus
 class DocumentRegistry:
     """Track document identity and ingestion state through a repository."""
 
-    def __init__(self, database_path: Path) -> None:
-        self._repository = DocumentRepository.for_sqlite_path(database_path)
+    def __init__(self, database_url: URL) -> None:
+        self._repository = DocumentRepository(database_url)
 
     def register_source(
         self,

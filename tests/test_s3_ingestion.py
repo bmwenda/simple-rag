@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from langchain_core.documents import Document
+from sqlalchemy.engine import URL
 
 from src.config import Settings
 from src.document_registry import DocumentRegistry
@@ -53,12 +54,14 @@ def make_s3_service(
     settings = Settings(
         openai_api_key="test-key",
         openai_model="test-model",
-        document_registry_path=tmp_path / "documents.sqlite3",
+        database_url=URL.create(
+            "sqlite+pysqlite", database=str(tmp_path / "documents.sqlite3")
+        ),
         chunk_size=20,
         chunk_overlap=0,
         max_document_size_bytes=max_document_size_bytes,
     )
-    registry = DocumentRegistry(settings.document_registry_path)
+    registry = DocumentRegistry(settings.database_url)
     return (
         DocumentIngestionService(settings, registry, FakeVectorStore()),
         registry,

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from langchain_core.documents import Document
+from sqlalchemy.engine import URL
 
 from src.config import Settings
 from src.document_registry import DocumentRegistry
@@ -35,7 +36,9 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
     values: dict[str, object] = {
         "openai_api_key": "test-key",
         "openai_model": "test-model",
-        "document_registry_path": tmp_path / "documents.sqlite3",
+        "database_url": URL.create(
+            "sqlite+pysqlite", database=str(tmp_path / "documents.sqlite3")
+        ),
         "chunk_size": 20,
         "chunk_overlap": 0,
         "embedding_batch_size": 100,
@@ -51,7 +54,7 @@ def make_service(
     **settings_overrides: object,
 ) -> tuple[DocumentIngestionService, DocumentRegistry]:
     settings = make_settings(tmp_path, **settings_overrides)
-    registry = DocumentRegistry(settings.document_registry_path)
+    registry = DocumentRegistry(settings.database_url)
     return DocumentIngestionService(settings, registry, store), registry
 
 

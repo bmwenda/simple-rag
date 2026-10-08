@@ -20,8 +20,9 @@ it can be delivered and reviewed independently.
   `src/document_types.py`, including PDF, plain text, Markdown, HTML, common
   Office formats, and structured text formats.
 - The local CLI remains the query interface until the web interface is delivered.
-- The document registry is SQLite and is suitable only for the current
-  single-process/local deployment model.
+- Runtime ingestion configures the document registry with PostgreSQL. SQLite
+  is used only for isolated unit tests; concurrent job claims are not yet in
+  place.
 - Chroma uses a local persistent directory; it has not been configured as a
   horizontally scalable production service.
 - S3 events must flow through SQS to Lambda. Direct S3-to-Lambda invocation is
@@ -112,13 +113,13 @@ operable without direct S3-to-Lambda delivery or manual local ingestion.
   attempts, leases, and ownership boundaries.
 - [x] Replace direct SQLite access in `DocumentRegistry` with repository code
   backed by the ORM.
-- [ ] Add PostgreSQL configuration, startup validation, health checks, and a
-  migration command for existing SQLite registry data.
+- [x] Add PostgreSQL configuration, startup validation, and health checks.
+  Existing local SQLite test data is not migrated.
 - [ ] Use transactional job claims and leases so multiple workers cannot index
   the same document version concurrently.
 - [ ] Deprecate SQLite for hosted deployments and local development.
 - [ ] Add PostgreSQL-backed integration tests for idempotency, concurrent job
-  claims, retry behavior, and migration correctness.
+  claims, retry behavior, startup validation, and health checks.
 
 Definition of done: production ingestion state is stored and coordinated in
 PostgreSQL.

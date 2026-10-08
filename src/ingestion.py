@@ -136,7 +136,7 @@ class DocumentIngestionService:
 def create_ingestion_service(settings: Settings) -> DocumentIngestionService:
     return DocumentIngestionService(
         settings=settings,
-        registry=DocumentRegistry(settings.document_registry_path),
+        registry=DocumentRegistry(settings.database_url),
         store=vector_store(settings),
     )
 

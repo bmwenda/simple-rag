@@ -2,13 +2,14 @@
 
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
-from sqlalchemy import DateTime, Integer, String, create_engine, select
-from sqlalchemy.engine import URL
+from sqlalchemy import DateTime, Integer, String, select, text
+from sqlalchemy.engine import URL, Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from .domain import DocumentRecord, DocumentStatus
+from .database import create_database_engine
+from .domain import ConfigurationError, DocumentRecord, DocumentStatus
 
 
 class Base(DeclarativeBase):
@@ -37,14 +38,21 @@ class DocumentRepository:
     """Keep each registry operation in one database transaction."""
 
     def __init__(self, database_url: URL) -> None:
-        engine = create_engine(database_url)
-        Base.metadata.create_all(engine)
+        engine: Engine | None = None
+        try:
+            engine = create_database_engine(database_url)
+            with engine.begin() as connection:
+                connection.execute(text("SELECT 1"))
+                Base.metadata.create_all(connection)
+                connection.execute(select(DocumentRow).limit(0))
+        except (SQLAlchemyError, OSError, ImportError):
+            if engine is not None:
+                engine.dispose()
+            raise ConfigurationError(
+                "Document registry database is unavailable or cannot be initialized"
+            ) from None
+        assert engine is not None
         self._sessions = sessionmaker(engine, expire_on_commit=False)
-
-    @classmethod
-    def for_sqlite_path(cls, database_path: Path) -> "DocumentRepository":
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-        return cls(URL.create("sqlite+pysqlite", database=str(database_path)))
 
     def register_source(
         self,

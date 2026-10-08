@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 from langchain_core.documents import Document
+from sqlalchemy.engine import URL
 
 from src.config import Settings
 from src.domain import RetrievalError
@@ -37,6 +38,7 @@ def settings(*, threshold: float = 0.2, count: int = 4) -> Settings:
     return Settings(
         openai_api_key="test-key",
         openai_model="test-model",
+        database_url=URL.create("sqlite+pysqlite", database=":memory:"),
         retrieval_count=count,
         retrieval_relevance_threshold=threshold,
     )

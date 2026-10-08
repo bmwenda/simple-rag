@@ -3,7 +3,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 
+from .database import parse_postgres_url
 from .domain import ConfigurationError
 
 
@@ -11,10 +13,10 @@ from .domain import ConfigurationError
 class Settings:
     openai_api_key: str = field(repr=False)
     openai_model: str
+    database_url: URL = field(repr=False)
     embedding_model: str = "text-embedding-3-large"
     chroma_collection: str = "rag-documents"
     chroma_directory: Path = Path("chroma_db")
-    document_registry_path: Path = Path("chroma_db/documents.sqlite3")
     retrieval_count: int = 4
     retrieval_relevance_threshold: float = 0.2
     chunk_size: int = 1000
@@ -32,14 +34,12 @@ class Settings:
         settings = cls(
             openai_api_key=_required_env("OPENAI_API_KEY"),
             openai_model=_required_env("OPENAI_MODEL"),
+            database_url=database_url_from_env(),
             embedding_model=os.getenv(
                 "OPENAI_EMBEDDING_MODEL", "text-embedding-3-large"
             ),
             chroma_collection=os.getenv("CHROMA_COLLECTION", "rag-documents"),
             chroma_directory=Path(os.getenv("CHROMA_DIRECTORY", "chroma_db")),
-            document_registry_path=Path(
-                os.getenv("DOCUMENT_REGISTRY_PATH", "chroma_db/documents.sqlite3")
-            ),
             retrieval_count=_integer_env("RETRIEVAL_COUNT", 4),
             retrieval_relevance_threshold=_float_env(
                 "RETRIEVAL_RELEVANCE_THRESHOLD", 0.2
@@ -77,6 +77,11 @@ class Settings:
             raise ConfigurationError("INGESTION_MAX_ATTEMPTS must be at least 1")
         if self.max_document_size_bytes < 1:
             raise ConfigurationError("MAX_DOCUMENT_SIZE_BYTES must be at least 1")
+
+
+def database_url_from_env() -> URL:
+    load_dotenv()
+    return parse_postgres_url(os.getenv("DATABASE_URL"))
 
 
 def _required_env(name: str) -> str:
