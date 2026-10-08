@@ -14,17 +14,15 @@ TEST_DATABASE_URL = URL.create("postgresql+psycopg", database="registry")
 
 def test_registry_startup_probes_connection_and_schema() -> None:
     engine = MagicMock()
-    connection = engine.begin.return_value.__enter__.return_value
+    connection = engine.connect.return_value.__enter__.return_value
 
     with (
         patch(
             "src.document_repository.create_database_engine", return_value=engine
         ),
-        patch("src.document_repository.Base.metadata.create_all") as create_all,
     ):
         DocumentRegistry(TEST_DATABASE_URL)
 
-    create_all.assert_called_once_with(connection)
     assert connection.execute.call_count == 2
     statements = [str(call.args[0]) for call in connection.execute.call_args_list]
     assert statements[0] == "SELECT 1"
@@ -36,7 +34,7 @@ def test_registry_startup_sanitizes_connection_failure() -> None:
 
     with (
         patch("src.document_repository.create_database_engine", side_effect=error),
-        pytest.raises(ConfigurationError, match="cannot be initialized") as caught,
+        pytest.raises(ConfigurationError, match="schema is incompatible") as caught,
     ):
         DocumentRegistry(TEST_DATABASE_URL)
 
@@ -45,7 +43,7 @@ def test_registry_startup_sanitizes_connection_failure() -> None:
 
 def test_registry_startup_rejects_incompatible_schema() -> None:
     engine = MagicMock()
-    connection = engine.begin.return_value.__enter__.return_value
+    connection = engine.connect.return_value.__enter__.return_value
     connection.execute.side_effect = [
         MagicMock(),
         OperationalError("schema", {}, Exception("missing column")),
@@ -55,8 +53,7 @@ def test_registry_startup_rejects_incompatible_schema() -> None:
         patch(
             "src.document_repository.create_database_engine", return_value=engine
         ),
-        patch("src.document_repository.Base.metadata.create_all"),
-        pytest.raises(ConfigurationError, match="cannot be initialized"),
+        pytest.raises(ConfigurationError, match="schema is incompatible"),
     ):
         DocumentRegistry(TEST_DATABASE_URL)
 

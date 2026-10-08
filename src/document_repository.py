@@ -41,15 +41,14 @@ class DocumentRepository:
         engine: Engine | None = None
         try:
             engine = create_database_engine(database_url)
-            with engine.begin() as connection:
+            with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
-                Base.metadata.create_all(connection)
                 connection.execute(select(DocumentRow).limit(0))
         except (SQLAlchemyError, OSError, ImportError):
             if engine is not None:
                 engine.dispose()
             raise ConfigurationError(
-                "Document registry database is unavailable or cannot be initialized"
+                "Document registry database is unavailable or schema is incompatible"
             ) from None
         assert engine is not None
         self._sessions = sessionmaker(engine, expire_on_commit=False)

@@ -55,6 +55,11 @@ tasks are maintained in the [product and delivery specification](docs/specificat
    `.env.example` for optional embedding, Chroma, retrieval, and chunking
    settings.
 
+   Create or update the registry schema with Alembic:
+   ```bash
+   uv run alembic upgrade head
+   ```
+
 4. **Add documents:**
    Place supported documents, such as PDF, text, Markdown, HTML, or Office
    files, in the `sources/` folder
@@ -79,8 +84,12 @@ succeeds.
 Failures are isolated to the affected document and retried according to
 `INGESTION_MAX_ATTEMPTS`.
 
-Before ingestion, the registry connects to PostgreSQL and ensures its document
-table is available. To probe database connectivity without an OpenAI key, run
+Before ingestion, the registry connects to PostgreSQL and checks that its
+document table has the expected columns. Schema changes are applied with
+Alembic. For an existing database whose schema already matches the initial
+migration, run `uv run alembic stamp head` to establish its migration baseline.
+To inspect the migration version, run `uv run alembic current`. To probe
+database connectivity without an OpenAI key, run
 `uv run python healthcheck.py`; it exits nonzero if the database query fails.
 
 ### Ingest from an S3 source bucket
