@@ -110,7 +110,7 @@ operable without direct S3-to-Lambda delivery or manual local ingestion.
 
 - [ ] Select an ORM and migration tool, and model documents, ingestion jobs,
   attempts, leases, and ownership boundaries.
-- [ ] Replace direct SQLite access in `DocumentRegistry` with repository code
+- [x] Replace direct SQLite access in `DocumentRegistry` with repository code
   backed by the ORM.
 - [ ] Add PostgreSQL configuration, startup validation, health checks, and a
   migration command for existing SQLite registry data.

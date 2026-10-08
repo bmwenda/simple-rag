@@ -10,6 +10,7 @@ tasks are maintained in the [product and delivery specification](docs/specificat
 - **LangChain** - LLM framework for building RAG pipelines
 - **OpenAI Embeddings** - Semantic text embeddings for understanding document meaning
 - **Chroma** - Vector database for efficient document storage and retrieval
+- **SQLAlchemy** - ORM persistence for document identity and ingestion state
 - **DoclingLoader** - Parses PDF, text, Markdown, HTML, Office, and other
   supported document formats
 - **RecursiveCharacterTextSplitter** - Intelligent document chunking with overlap
