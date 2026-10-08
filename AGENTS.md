@@ -43,6 +43,12 @@ there is no configured coverage threshold.
 
 ## Commit & Pull Request Guidelines
 
+For every issue-based or ad hoc repository change, read and follow
+`skills/project-workflow/SKILL.md` before implementation. It governs issue
+review, project status, branching, verification, and pull-request handoff.
+Use `skills/gitlab-commit/SKILL.md` and `skills/pull-request/SKILL.md` for the
+commit and PR steps it requires.
+
 Use an imperative, capitalized commit subject of at least three words and no
 more than 72 characters, without a trailing period (for example, `Add S3
 ingestion tests`). Add a wrapped body when context is useful. Pull requests
