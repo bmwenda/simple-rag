@@ -115,6 +115,7 @@ operable without direct S3-to-Lambda delivery or manual local ingestion.
   repository code backed by the ORM.
 - [x] Add PostgreSQL configuration, startup validation, and health checks.
 - [x] Manage the registry schema with Alembic migrations.
+- [x] Provide local database create, drop, migrate, and prepare commands.
 - [ ] Use transactional job claims and leases so multiple workers cannot index
   the same document version concurrently.
 - [x] Use PostgreSQL for the registry in hosted and local development;

@@ -19,7 +19,18 @@ dependencies = [
     "alembic>=1.20.0",
 ]
 
+[project.scripts]
+db = "src.db_cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["src"]
+
 [tool.uv]
+package = true
 required-environments = [
     "sys_platform == 'darwin' and platform_machine == 'x86_64'"
 ]
