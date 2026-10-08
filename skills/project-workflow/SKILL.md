@@ -11,8 +11,8 @@ issue. The issue is the source of truth for scope and acceptance criteria; do
 not start implementation without an issue number.
 
 For an ad hoc request with no issue, create a GitHub issue before reviewing or
-implementing the change. Give it a concise outcome-focused title and a body
-with the requested context and testable acceptance criteria. Use the newly
+implementing the change. Use `skills/issue-writing/SKILL.md` to write its title,
+description, acceptance criteria, and any useful artifacts. Use the newly
 created issue as the workflow input, and add it to the project when it belongs
 to the project backlog. Do not treat the chat request as a substitute for the
 issue or begin implementation before the issue exists.
@@ -20,10 +20,11 @@ issue or begin implementation before the issue exists.
 ## 1. Review the issue
 
 Read the issue, its acceptance criteria, comments, labels, milestone, and
-linked context. Inspect relevant repository code and documentation, and note
-dependencies, ambiguities, and required verification. If the issue lacks
-testable acceptance criteria or has conflicting requirements, ask for
-clarification before making changes.
+linked context. Check its content against `skills/issue-writing/SKILL.md`.
+Inspect relevant repository code and documentation, and note dependencies,
+ambiguities, and required verification. Resolve missing issue content using
+the issue-writing skill before implementation. If requirements conflict, ask
+for clarification before making changes.
 
 ## 2. Update project status
 
