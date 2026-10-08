@@ -29,6 +29,7 @@ tasks are maintained in the [product and delivery specification](docs/specificat
 ### Prerequisites
 - Python 3.12
 - OpenAI API key
+- PostgreSQL database for the document registry
 
 ### Steps
 
@@ -47,10 +48,12 @@ tasks are maintained in the [product and delivery specification](docs/specificat
    ```
    OPENAI_API_KEY=your-api-key-here
    OPENAI_MODEL=gpt-4-turbo
+   DATABASE_URL=postgresql+psycopg://rag_user:change_me@localhost:5432/simple_rag
    ```
 
-   See `.env.example` for optional embedding, Chroma, retrieval, and chunking
-   settings.
+   Create the PostgreSQL database and account before ingestion. See
+   `.env.example` for optional embedding, Chroma, retrieval, and chunking
+   settings. Existing local SQLite registry data is not transferred.
 
 4. **Add documents:**
    Place supported documents, such as PDF, text, Markdown, HTML, or Office
@@ -69,11 +72,16 @@ tasks are maintained in the [product and delivery specification](docs/specificat
 uv run python ingest_sources.py
 ```
 
-Each source receives a persistent document identity and checksum in the local
-registry. Re-running ingestion skips unchanged documents; changing a file writes
-a new index version and removes the old chunks after the replacement succeeds.
+Each source receives a persistent document identity and checksum in the
+PostgreSQL registry. Re-running ingestion skips unchanged documents; changing a
+file writes a new index version and removes the old chunks after the replacement
+succeeds.
 Failures are isolated to the affected document and retried according to
 `INGESTION_MAX_ATTEMPTS`.
+
+Before ingestion, the registry connects to PostgreSQL and ensures its document
+table is available. To probe database connectivity without an OpenAI key, run
+`uv run python healthcheck.py`; it exits nonzero if the database query fails.
 
 ### Ingest from an S3 source bucket
 

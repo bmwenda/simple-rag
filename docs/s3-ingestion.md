@@ -17,11 +17,14 @@ S3_SOURCE_BUCKET=company-rag-sources
 S3_SOURCE_PREFIX=incoming
 AWS_REGION=eu-west-1
 MAX_DOCUMENT_SIZE_BYTES=104857600
+DATABASE_URL=postgresql+psycopg://rag_user:change_me@db-host:5432/simple_rag
 ```
 
 `S3_SOURCE_PREFIX` may be empty to allow the whole bucket. The execution role
 needs `s3:GetObject` and `s3:HeadObject` on the configured bucket and prefix,
 plus read/write access to the configured vector store and document registry.
+The worker must be able to connect to PostgreSQL before processing messages;
+use `uv run python healthcheck.py` for a database connectivity probe.
 Keep the bucket private and enable server-side encryption.
 
 ## Event delivery
