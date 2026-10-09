@@ -17,10 +17,13 @@ dependencies = [
     "sqlalchemy>=2.0,<3.0",
     "psycopg[binary]>=3.2,<4",
     "alembic>=1.20.0",
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
 ]
 
 [project.scripts]
 db = "src.db_cli:main"
+profile-admin = "src.profile_admin:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -37,6 +40,7 @@ required-environments = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.27,<1",
     "mypy>=2.3.0",
     "pytest>=8.0.0",
     "ruff>=0.12.0",

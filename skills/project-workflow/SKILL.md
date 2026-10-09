@@ -56,6 +56,8 @@ Commit using the GitLab-style commit skill, push the issue branch, and use the
 pull-request skill to create the PR. The PR must include prose Description,
 Acceptance criteria mapped to the issue, Testing when applicable, and a
 closing reference such as `Closes #<number>`. Include only the selected issue
-unless the user explicitly authorizes related scope. Leave the issue in the
-project's review-ready state after opening the PR; do not mark it complete
-before merge.
+unless the user explicitly authorizes related scope. After opening the PR,
+move the selected issue's project item Status to `In Review` and verify the
+change on the project board. Do not mark the issue `Done` before merge. If the
+project item or `In Review` status is unavailable, report the blocker instead
+of silently leaving the handoff incomplete.

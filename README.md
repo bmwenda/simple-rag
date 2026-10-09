@@ -107,6 +107,26 @@ document table has the expected columns. To probe database connectivity without
 an OpenAI key, run
 `uv run python healthcheck.py`; it exits nonzero if the database query fails.
 
+### Self-profile API
+
+After applying migrations, provision the first owner outside the API:
+
+```bash
+uv run profile-admin owner@example.com
+```
+
+Set `API_BEARER_TOKEN` in `.env` to a unique random value of at least 32
+characters. Generate one with
+`python -c 'import secrets; print(secrets.token_urlsafe(32))'`, then run
+`uv run uvicorn src.profile_api:app --host 127.0.0.1 --port 8000`.
+The token is sent as `Authorization: Bearer <token>` to
+`GET`, `PATCH`, and `DELETE /v1/users/me`. The first owner can update their
+email and name through this API. Deleting the owner immediately revokes this
+token's API access; the later retention work will purge deleted data.
+
+There is no public registration route. Chat endpoints and a replaceable token
+verifier are tracked separately in the Chat Interface backlog.
+
 ### Ingest from an S3 source bucket
 
 Set `S3_SOURCE_BUCKET`, optionally limit it with `S3_SOURCE_PREFIX`, and deploy
