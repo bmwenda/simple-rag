@@ -107,7 +107,7 @@ document table has the expected columns. To probe database connectivity without
 an OpenAI key, run
 `uv run python healthcheck.py`; it exits nonzero if the database query fails.
 
-### Self-profile API
+### Profile and chat API
 
 After applying migrations, provision the first owner outside the API:
 
@@ -126,20 +126,28 @@ provisioning the owner:
 uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-The self-profile API is available at `http://127.0.0.1:8000/v1/users/me`.
-Send the token as `Authorization: Bearer <token>` to
-`GET`, `PATCH`, and `DELETE /v1/users/me`. The first owner can update their
-email and name through this API. Deleting the owner immediately revokes this
-token's API access; the later retention work will purge deleted data.
+Send the token as `Authorization: Bearer <token>` to `/v1/users/me` and
+`/v1/chats`. The first owner can update their email and name through
+`GET`, `PATCH`, and `DELETE /v1/users/me`. Create a chat with
+`POST /v1/chats` and a JSON body such as `{"content": "What is the policy?"}`.
+Chat creation waits for an answer and requires the configured OpenAI model,
+embedding key, and indexed documents. `GET /v1/chats` lists chats with optional
+`status`, `cursor`, and `limit` query parameters; `GET`, `PATCH`, and `DELETE`
+`/v1/chats/{id}` manage one chat. Deletion hides it immediately and records a
+deletion timestamp for the retention process tracked in issue #47.
 
-There is no public registration route. Chat endpoints and a replaceable token
-verifier are tracked separately in the Chat Interface backlog.
+Deleting the owner immediately revokes this token's API access; later
+retention work will purge deleted data.
+
+There is no public registration route. Message-history and follow-up chat
+endpoints and a replaceable token verifier are tracked separately in the Chat
+Interface backlog.
 
 `src/api/main.py` builds the app and includes resource routers under `/v1`.
 Place new HTTP handlers in `src/api/routers/`, request and response schemas in
 `src/api/schemas/`, and shared authentication or service dependencies in
 `src/api/dependencies.py`. Domain rules and persistence stay in their modules
-under `src/`; the app lifespan opens and closes the profile repository.
+under `src/`; the app lifespan manages profile and chat repositories.
 
 ### Ingest from an S3 source bucket
 

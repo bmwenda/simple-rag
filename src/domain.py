@@ -58,6 +58,8 @@ class RetrievedChunk:
     chunk_index: int
     text: str
     relevance_score: float
+    index_version: int = 0
+    source_uri: str = ""
 
 
 @dataclass(frozen=True)
@@ -68,6 +70,8 @@ class Citation:
     page_number: int | None
     chunk_index: int
     excerpt: str
+    index_version: int = 0
+    source_uri: str = ""
 
 
 @dataclass(frozen=True)
