@@ -14,6 +14,9 @@ from ..schemas.chats import (
     ChatListResponse,
     ChatResponse,
     ChatUpdate,
+    FollowupResponse,
+    MessageCreate,
+    MessageListResponse,
     MessageResponse,
 )
 
@@ -73,3 +76,32 @@ def delete_chat(
 ) -> Response:
     service.delete_chat(profile.id, chat_id)
     return Response(status_code=204)
+
+
+@router.get("/{chat_id}/messages", response_model=MessageListResponse)
+def list_messages(
+    chat_id: Annotated[int, Path(ge=1)],
+    profile: Annotated[Profile, Depends(current_profile)],
+    service: Annotated[ChatHistoryService, Depends(get_chat_history_service)],
+    cursor: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+) -> MessageListResponse:
+    return MessageListResponse.from_page(
+        service.list_messages(profile.id, chat_id, cursor, limit)
+    )
+
+
+@router.post("/{chat_id}/messages", status_code=201, response_model=FollowupResponse)
+def create_message(
+    chat_id: Annotated[int, Path(ge=1)],
+    request: MessageCreate,
+    profile: Annotated[Profile, Depends(current_profile)],
+    service: Annotated[ChatHistoryService, Depends(get_chat_history_service)],
+) -> FollowupResponse:
+    user_message, assistant_message = service.add_followup(
+        profile.id, chat_id, request.content
+    )
+    return FollowupResponse(
+        user_message=MessageResponse.from_record(user_message),
+        assistant_message=MessageResponse.from_record(assistant_message),
+    )

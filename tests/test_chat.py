@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import pytest
 
 from src.chat import ABSTENTION_MESSAGE, ChatService, build_answer, format_context
+from src.chat_history import MessageRecord
 from src.domain import AnswerGenerationError, RetrievedChunk
 
 
@@ -54,7 +56,34 @@ def test_answer_passes_numbered_context_to_chain() -> None:
     assert chain.input == {
         "context": "[1] Source: policies.pdf, page 3\nContext 1",
         "query": "Where is the policy?",
+        "history": "",
     }
+
+
+def test_followup_uses_bounded_history_for_interpretation_and_retrieved_context() -> None:
+    chain = FakeChain(response="The handbook says yes [1].")
+    queries: list[str] = []
+
+    def retrieve(query: str) -> list[RetrievedChunk]:
+        queries.append(query)
+        return [chunk()]
+
+    service = ChatService(chain=chain, retrieve=retrieve)
+    now = datetime(2026, 10, 9, tzinfo=timezone.utc)
+    history = tuple(
+        MessageRecord(id=index, speaker="user", content=f"Question {index}", created_at=now)
+        for index in range(20)
+    )
+    answer = service.answer("What about that?", history)
+
+    assert answer.citations[0].document_id == "policies_pdf"
+    assert "Question 19" in queries[0]
+    assert "Question 0" not in queries[0]
+    assert "What about that?" in queries[0]
+    assert chain.input is not None
+    assert "Question 8" in chain.input["history"]
+    assert "Question 7" not in chain.input["history"]
+    assert chain.input["context"].startswith("[1] Source: policies.pdf")
 
 
 def test_answer_abstains_without_calling_model_when_retrieval_is_empty() -> None:

@@ -7,6 +7,7 @@ from typing import Annotated, cast
 from dotenv import load_dotenv
 from fastapi import Depends, Header, Request
 
+from src.chat_history import MessageRecord
 from src.chat_history_service import Answerer, ChatHistoryService, ChatRepository
 from src.domain import Answer
 from src.profile import Profile
@@ -35,11 +36,11 @@ def get_chat_repository(request: Request) -> ChatRepository:
 
 
 class LazyAnswerer:
-    def answer(self, query: str) -> Answer:
+    def answer(self, query: str, history: tuple[MessageRecord, ...] = ()) -> Answer:
         from src.chat import create_chat_service
         from src.config import Settings
 
-        return create_chat_service(Settings.from_env()).answer(query)
+        return create_chat_service(Settings.from_env()).answer(query, history)
 
 
 def get_answerer() -> Answerer:

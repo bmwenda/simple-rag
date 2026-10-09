@@ -4,6 +4,8 @@ from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from .chat_history import MessageRecord
+from .chat_history_service import MAX_HISTORY_MESSAGES
 from .config import Settings
 from .domain import Answer, AnswerGenerationError, Citation, RetrievedChunk
 from .model import get_chat_model
@@ -16,8 +18,11 @@ SYSTEM_PROMPT = (
     "provided company context. Cite every factual claim with one or more of the "
     "numbered citations exactly as written, for example [1]. Never invent a "
     "citation number. If the context does not contain the answer, respond "
-    f'exactly: "{ABSTENTION_MESSAGE}"\n\nContext:\n{{context}}'
+    f'exactly: "{ABSTENTION_MESSAGE}". Use conversation history only to '
+    "interpret follow-up references; never treat it as factual evidence.\n\n"
+    "Conversation history (not evidence):\n{history}\n\nContext:\n{context}"
 )
+MAX_HISTORY_CHARACTERS = 500
 
 
 class Message(Protocol):
@@ -38,19 +43,33 @@ class ChatService:
         self._chain = chain
         self._retrieve = retrieve
 
-    def answer(self, query: str) -> Answer:
-        chunks = self._retrieve(query)
+    def answer(self, query: str, history: tuple[MessageRecord, ...] = ()) -> Answer:
+        bounded_history = history[-MAX_HISTORY_MESSAGES:]
+        history_text = format_history(bounded_history)
+        retrieval_query = (
+            f"{format_history(bounded_history[-4:])}\nCurrent question: {query}"
+            if bounded_history
+            else query
+        )
+        chunks = self._retrieve(retrieval_query)
         if not chunks:
             return Answer(text=ABSTENTION_MESSAGE, citations=())
 
         try:
             response = self._chain.invoke(
-                {"context": format_context(chunks), "query": query}
+                {"context": format_context(chunks), "query": query, "history": history_text}
             )
         except Exception as exc:
             raise AnswerGenerationError("Answer generation failed") from exc
 
         return build_answer(response.text, chunks)
+
+
+def format_history(messages: tuple[MessageRecord, ...]) -> str:
+    return "\n".join(
+        f"{message.speaker}: {message.content[:MAX_HISTORY_CHARACTERS]}"
+        for message in messages[-MAX_HISTORY_MESSAGES:]
+    )
 
 
 def format_context(chunks: list[RetrievedChunk]) -> str:

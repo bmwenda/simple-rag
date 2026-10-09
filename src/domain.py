@@ -69,7 +69,7 @@ class Citation:
     display_name: str
     page_number: int | None
     chunk_index: int
-    excerpt: str
+    excerpt: str | None
     index_version: int = 0
     source_uri: str = ""
 
