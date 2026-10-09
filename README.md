@@ -117,9 +117,17 @@ uv run profile-admin owner@example.com
 
 Set `API_BEARER_TOKEN` in `.env` to a unique random value of at least 32
 characters. Generate one with
-`python -c 'import secrets; print(secrets.token_urlsafe(32))'`, then run
-`uv run uvicorn src.profile_api:app --host 127.0.0.1 --port 8000`.
-The token is sent as `Authorization: Bearer <token>` to
+`python -c 'import secrets; print(secrets.token_urlsafe(32))'`.
+
+Start the API server from the project root after preparing the database and
+provisioning the owner:
+
+```bash
+uv run uvicorn src.profile_api:app --host 127.0.0.1 --port 8000
+```
+
+The self-profile API is available at `http://127.0.0.1:8000/v1/users/me`.
+Send the token as `Authorization: Bearer <token>` to
 `GET`, `PATCH`, and `DELETE /v1/users/me`. The first owner can update their
 email and name through this API. Deleting the owner immediately revokes this
 token's API access; the later retention work will purge deleted data.
