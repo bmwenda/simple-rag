@@ -123,7 +123,7 @@ Start the API server from the project root after preparing the database and
 provisioning the owner:
 
 ```bash
-uv run uvicorn src.profile_api:app --host 127.0.0.1 --port 8000
+uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ```
 
 The self-profile API is available at `http://127.0.0.1:8000/v1/users/me`.
@@ -134,6 +134,12 @@ token's API access; the later retention work will purge deleted data.
 
 There is no public registration route. Chat endpoints and a replaceable token
 verifier are tracked separately in the Chat Interface backlog.
+
+`src/api/main.py` builds the app and includes resource routers under `/v1`.
+Place new HTTP handlers in `src/api/routers/`, request and response schemas in
+`src/api/schemas/`, and shared authentication or service dependencies in
+`src/api/dependencies.py`. Domain rules and persistence stay in their modules
+under `src/`; the app lifespan opens and closes the profile repository.
 
 ### Ingest from an S3 source bucket
 

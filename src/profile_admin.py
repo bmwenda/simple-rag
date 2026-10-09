@@ -16,9 +16,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("email")
     args = parser.parse_args(argv)
     try:
-        profile = SqlProfileRepository(database_url_from_env()).provision_owner(
-            args.email
-        )
+        repository = SqlProfileRepository(database_url_from_env())
+        try:
+            profile = repository.provision_owner(args.email)
+        finally:
+            repository.close()
     except (ConfigurationError, DuplicateEmailError, InvalidProfileError) as error:
         print(error)
         return 1
