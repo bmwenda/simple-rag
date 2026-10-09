@@ -21,6 +21,10 @@ class ArchivedChatError(Exception):
     """An archived chat cannot accept a new message."""
 
 
+class ChatBusyError(Exception):
+    """An answer is already being generated for this chat."""
+
+
 @dataclass(frozen=True)
 class ChatRecord:
     id: int
@@ -50,6 +54,26 @@ class MessageRecord:
 class ChatPage:
     items: tuple[ChatSummary, ...]
     next_cursor: str | None
+
+
+@dataclass(frozen=True)
+class MessagePage:
+    items: tuple[MessageRecord, ...]
+    next_cursor: str | None
+
+
+@dataclass(frozen=True)
+class PendingMessage:
+    token: str
+    user_message: MessageRecord
+    history: tuple[MessageRecord, ...]
+
+
+@dataclass(frozen=True)
+class PendingChat:
+    chat: ChatRecord
+    user_message: MessageRecord
+    token: str
 
 
 def normalize_content(content: str) -> str:
@@ -99,5 +123,29 @@ def decode_cursor(cursor: str) -> tuple[datetime, int]:
         if encode_cursor(value, chat_id) != cursor:
             raise ValueError
         return value, chat_id
+    except (ValueError, TypeError, UnicodeDecodeError, binascii.Error):
+        raise InvalidChatError("Invalid cursor") from None
+
+
+def encode_message_cursor(chat_id: int, message_id: int) -> str:
+    payload = json.dumps([chat_id, message_id], separators=(",", ":"))
+    return base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+
+
+def decode_message_cursor(cursor: str, chat_id: int) -> int:
+    try:
+        raw = base64.b64decode(
+            cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True
+        )
+        stored_chat_id, message_id = json.loads(raw)
+        if (
+            type(stored_chat_id) is not int
+            or stored_chat_id != chat_id
+            or type(message_id) is not int
+            or message_id < 1
+            or encode_message_cursor(chat_id, message_id) != cursor
+        ):
+            raise ValueError
+        return message_id
     except (ValueError, TypeError, UnicodeDecodeError, binascii.Error):
         raise InvalidChatError("Invalid cursor") from None

@@ -5,7 +5,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
-from src.chat_history import ChatPage, ChatRecord, ChatSummary, MessageRecord
+from src.chat_history import (
+    ChatPage,
+    ChatRecord,
+    ChatSummary,
+    MessagePage,
+    MessageRecord,
+)
 from src.domain import Citation
 
 
@@ -13,6 +19,10 @@ class ChatCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     content: str = Field(max_length=10000)
+
+
+class MessageCreate(ChatCreate):
+    """The next question in an existing chat."""
 
 
 class ChatUpdate(BaseModel):
@@ -78,7 +88,7 @@ class CitationResponse(BaseModel):
     chunk_index: int
     display_name: str
     page_number: int | None
-    excerpt: str
+    excerpt: str | None
 
     @classmethod
     def from_citation(cls, citation: Citation) -> "CitationResponse":
@@ -117,5 +127,22 @@ class MessageResponse(BaseModel):
 
 class ChatCreateResponse(BaseModel):
     chat: ChatResponse
+    user_message: MessageResponse
+    assistant_message: MessageResponse
+
+
+class MessageListResponse(BaseModel):
+    items: list[MessageResponse]
+    next_cursor: str | None
+
+    @classmethod
+    def from_page(cls, page: MessagePage) -> "MessageListResponse":
+        return cls(
+            items=[MessageResponse.from_record(item) for item in page.items],
+            next_cursor=page.next_cursor,
+        )
+
+
+class FollowupResponse(BaseModel):
     user_message: MessageResponse
     assistant_message: MessageResponse

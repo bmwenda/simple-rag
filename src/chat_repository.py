@@ -1,6 +1,7 @@
 """SQLAlchemy storage for owned chat history."""
 
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import (
     CheckConstraint,
@@ -23,18 +24,26 @@ from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, session
 
 from .chat_history import (
     ArchivedChatError,
+    ChatBusyError,
     ChatNotFoundError,
     ChatPage,
     ChatRecord,
     ChatSummary,
+    MessagePage,
     MessageRecord,
+    PendingChat,
+    PendingMessage,
     decode_cursor,
+    decode_message_cursor,
     encode_cursor,
+    encode_message_cursor,
 )
 from .database import create_database_engine
 from .document_repository import Base
 from .domain import Citation, ConfigurationError
 from .profile_repository import UserRow
+
+GENERATION_LEASE = timedelta(minutes=5)
 
 
 class ChatRow(Base):
@@ -52,6 +61,8 @@ class ChatRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    generation_token: Mapped[str | None] = mapped_column(String(36))
+    generation_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     user: Mapped[UserRow] = relationship()
 
 
@@ -111,15 +122,27 @@ class SqlChatRepository:
         self._engine.dispose()
 
     def create_chat(self, user_id: int, title: str, content: str) -> tuple[ChatRecord, MessageRecord]:
+        pending = self._insert_chat(user_id, title, content, reserve=False)
+        return pending.chat, pending.user_message
+
+    def begin_chat(self, user_id: int, title: str, content: str) -> PendingChat:
+        return self._insert_chat(user_id, title, content, reserve=True)
+
+    def _insert_chat(
+        self, user_id: int, title: str, content: str, *, reserve: bool
+    ) -> PendingChat:
         with self._sessions.begin() as session:
             _active_user(session, user_id)
             now = _timestamp()
+            token = str(uuid.uuid4()) if reserve else ""
             chat = ChatRow(
                 user_id=user_id,
                 title=title,
                 status="active",
                 created_at=now,
                 updated_at=now,
+                generation_token=token or None,
+                generation_started_at=now if reserve else None,
             )
             session.add(chat)
             session.flush()
@@ -128,7 +151,9 @@ class SqlChatRepository:
             )
             session.add(message)
             session.flush()
-            return _to_chat(chat), _to_message(message)
+            return PendingChat(
+                chat=_to_chat(chat), user_message=_to_message(message), token=token
+            )
 
     def add_assistant_message(
         self, user_id: int, chat_id: int, content: str, citations: tuple[Citation, ...]
@@ -137,28 +162,122 @@ class SqlChatRepository:
             chat = _owned_chat(session, user_id, chat_id, lock=True)
             if chat.status != "active":
                 raise ArchivedChatError
+            if chat.generation_token is not None:
+                raise ChatBusyError
             now = _timestamp()
             message = ChatMessageRow(
                 chat_id=chat.id, speaker="assistant", content=content, created_at=now
             )
             session.add(message)
             session.flush()
-            for citation in citations:
-                session.add(
-                    ChatCitationRow(
-                        message_id=message.id,
-                        citation_number=citation.citation_id,
-                        document_id=citation.document_id,
-                        index_version=citation.index_version,
-                        chunk_index=citation.chunk_index,
-                        display_name=citation.display_name,
-                        source_uri=citation.source_uri,
-                        page_number=citation.page_number,
-                        excerpt=citation.excerpt,
-                    )
-                )
+            _add_citations(session, message.id, citations)
             chat.updated_at = now
             return _to_message(message, citations)
+
+    def list_messages(
+        self, user_id: int, chat_id: int, cursor: str | None, limit: int
+    ) -> MessagePage:
+        with self._sessions() as session:
+            _owned_chat(session, user_id, chat_id)
+            statement = select(ChatMessageRow).where(ChatMessageRow.chat_id == chat_id)
+            if cursor is not None:
+                statement = statement.where(
+                    ChatMessageRow.id > decode_message_cursor(cursor, chat_id)
+                )
+            rows = session.scalars(
+                statement.order_by(ChatMessageRow.id).limit(limit + 1)
+            ).all()
+            visible = rows[:limit]
+            citations_by_message: dict[int, list[Citation]] = {}
+            if visible:
+                citation_rows = session.scalars(
+                    select(ChatCitationRow)
+                    .where(ChatCitationRow.message_id.in_([row.id for row in visible]))
+                    .order_by(ChatCitationRow.message_id, ChatCitationRow.citation_number)
+                ).all()
+                for citation in citation_rows:
+                    citations_by_message.setdefault(citation.message_id, []).append(
+                        _to_citation(citation)
+                    )
+            return MessagePage(
+                items=tuple(
+                    _to_message(row, tuple(citations_by_message.get(row.id, ())))
+                    for row in visible
+                ),
+                next_cursor=(
+                    encode_message_cursor(chat_id, visible[-1].id)
+                    if len(rows) > limit
+                    else None
+                ),
+            )
+
+    def begin_followup(
+        self, user_id: int, chat_id: int, content: str, history_limit: int
+    ) -> PendingMessage:
+        with self._sessions.begin() as session:
+            chat = _owned_chat(session, user_id, chat_id, lock=True)
+            if chat.status != "active":
+                raise ArchivedChatError
+            now = _timestamp()
+            if (
+                chat.generation_token is not None
+                and chat.generation_started_at is not None
+                and _as_utc(chat.generation_started_at) > now - GENERATION_LEASE
+            ):
+                raise ChatBusyError
+            prior = session.scalars(
+                select(ChatMessageRow)
+                .where(ChatMessageRow.chat_id == chat_id)
+                .order_by(ChatMessageRow.id.desc())
+                .limit(history_limit)
+            ).all()
+            token = str(uuid.uuid4())
+            chat.generation_token = token
+            chat.generation_started_at = now
+            chat.updated_at = now
+            message = ChatMessageRow(
+                chat_id=chat_id, speaker="user", content=content, created_at=now
+            )
+            session.add(message)
+            session.flush()
+            return PendingMessage(
+                token=token,
+                user_message=_to_message(message),
+                history=tuple(_to_message(row) for row in reversed(prior)),
+            )
+
+    def complete_followup(
+        self,
+        user_id: int,
+        chat_id: int,
+        token: str,
+        content: str,
+        citations: tuple[Citation, ...],
+    ) -> MessageRecord:
+        with self._sessions.begin() as session:
+            chat = _owned_chat(session, user_id, chat_id, lock=True)
+            if chat.generation_token != token:
+                raise ChatBusyError
+            if chat.status != "active":
+                raise ArchivedChatError
+            now = _timestamp()
+            message = ChatMessageRow(
+                chat_id=chat_id, speaker="assistant", content=content, created_at=now
+            )
+            session.add(message)
+            session.flush()
+            _add_citations(session, message.id, citations)
+            chat.generation_token = None
+            chat.generation_started_at = None
+            chat.updated_at = now
+            return _to_message(message, citations)
+
+    def release_followup(self, chat_id: int, token: str) -> None:
+        with self._sessions.begin() as session:
+            chat = session.get(ChatRow, chat_id, with_for_update=True)
+            if chat is not None and chat.generation_token == token:
+                chat.generation_token = None
+                chat.generation_started_at = None
 
     def list_chats(
         self, user_id: int, status: str | None, cursor: str | None, limit: int
@@ -276,4 +395,34 @@ def _to_message(row: ChatMessageRow, citations: tuple[Citation, ...] = ()) -> Me
         content=row.content,
         created_at=_as_utc(row.created_at),
         citations=citations,
+    )
+
+
+def _add_citations(session: Session, message_id: int, citations: tuple[Citation, ...]) -> None:
+    for citation in citations:
+        session.add(
+            ChatCitationRow(
+                message_id=message_id,
+                citation_number=citation.citation_id,
+                document_id=citation.document_id,
+                index_version=citation.index_version,
+                chunk_index=citation.chunk_index,
+                display_name=citation.display_name,
+                source_uri=citation.source_uri,
+                page_number=citation.page_number,
+                excerpt=citation.excerpt,
+            )
+        )
+
+
+def _to_citation(row: ChatCitationRow) -> Citation:
+    return Citation(
+        citation_id=row.citation_number,
+        document_id=row.document_id,
+        display_name=row.display_name,
+        page_number=row.page_number,
+        chunk_index=row.chunk_index,
+        excerpt=row.excerpt,
+        index_version=row.index_version,
+        source_uri=row.source_uri,
     )

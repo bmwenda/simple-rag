@@ -4,7 +4,12 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from src.chat_history import ArchivedChatError, ChatNotFoundError, InvalidChatError
+from src.chat_history import (
+    ArchivedChatError,
+    ChatBusyError,
+    ChatNotFoundError,
+    InvalidChatError,
+)
 
 
 class ApiError(Exception):
@@ -27,6 +32,13 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=409,
             content={"error": {"code": "chat_archived", "message": "Chat is archived"}},
+        )
+
+    @app.exception_handler(ChatBusyError)
+    async def busy_chat(_request: Request, _error: ChatBusyError) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={"error": {"code": "chat_busy", "message": "Chat is busy"}},
         )
 
     @app.exception_handler(InvalidChatError)

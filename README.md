@@ -136,12 +136,19 @@ embedding key, and indexed documents. `GET /v1/chats` lists chats with optional
 `/v1/chats/{id}` manage one chat. Deletion hides it immediately and records a
 deletion timestamp for the retention process tracked in issue #47.
 
+`GET /v1/chats/{id}/messages` returns messages in chronological order with
+optional `cursor` and `limit` parameters. `POST /v1/chats/{id}/messages` accepts
+`{"content": "Follow-up question"}` and waits for the assistant answer. The
+server uses up to 12 recent messages to interpret a follow-up, while the
+answer is grounded in retrieved documents. If generation fails, the submitted
+question remains visible when the client reloads message history. A second
+post to the same chat during answer generation returns `409`.
+
 Deleting the owner immediately revokes this token's API access; later
 retention work will purge deleted data.
 
-There is no public registration route. Message-history and follow-up chat
-endpoints and a replaceable token verifier are tracked separately in the Chat
-Interface backlog.
+There is no public registration route. A replaceable token verifier is tracked
+separately in the Chat Interface backlog.
 
 `src/api/main.py` builds the app and includes resource routers under `/v1`.
 Place new HTTP handlers in `src/api/routers/`, request and response schemas in
