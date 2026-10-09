@@ -1,6 +1,8 @@
 # Chat entities and v1 API plan
 
-Status: Design reference; not yet implemented. See [the delivery backlog](specification.md).
+Status: Design reference; profile and chat lifecycle routes are implemented.
+Message history, follow-up, and purge remain in the
+[delivery backlog](specification.md).
 
 This plan defines the first browser chat release for one authenticated user.
 It covers profile and chat-history resources, not document upload, document

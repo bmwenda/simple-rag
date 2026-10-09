@@ -97,6 +97,8 @@ def _to_citation(chunk: RetrievedChunk) -> Citation:
         page_number=chunk.page_number,
         chunk_index=chunk.chunk_index,
         excerpt=chunk.text,
+        index_version=chunk.index_version,
+        source_uri=chunk.source_uri,
     )
 
 

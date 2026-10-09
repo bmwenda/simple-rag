@@ -1,5 +1,6 @@
 from alembic import context
 
+import src.chat_repository
 import src.profile_repository  # noqa: F401 - register profile tables in metadata
 from src.config import database_url_from_env
 from src.database import create_database_engine

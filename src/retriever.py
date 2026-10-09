@@ -74,6 +74,7 @@ def _to_retrieved_chunk(
     display_name = str(metadata.get("display_name") or os.path.basename(source))
     page_number = metadata.get("page_number")
     chunk_index = metadata.get("chunk_index", 0)
+    index_version = metadata.get("index_version", 0)
 
     return RetrievedChunk(
         citation_id=citation_id,
@@ -83,4 +84,6 @@ def _to_retrieved_chunk(
         chunk_index=chunk_index if isinstance(chunk_index, int) else 0,
         text=document.page_content,
         relevance_score=score,
+        index_version=index_version if isinstance(index_version, int) else 0,
+        source_uri=source,
     )
