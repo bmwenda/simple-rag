@@ -68,7 +68,11 @@ class SqlProfileRepository:
                 "Profile database is unavailable or schema is incompatible"
             ) from None
         assert engine is not None
+        self._engine = engine
         self._sessions = sessionmaker(engine, expire_on_commit=False)
+
+    def close(self) -> None:
+        self._engine.dispose()
 
     def get_owner(self) -> Profile | None:
         with self._sessions() as session:

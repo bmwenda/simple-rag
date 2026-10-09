@@ -6,8 +6,9 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
+from src.api.dependencies import get_repository
+from src.api.main import app, create_app
 from src.profile import DuplicateEmailError, Profile, ProfileNotFoundError
-from src.profile_api import app, get_repository
 
 TOKEN = "a-secret-test-token-with-at-least-32-characters"
 HEADERS = {"Authorization": f"Bearer {TOKEN}"}
@@ -26,6 +27,7 @@ class FakeProfileRepository:
             updated_at=NOW,
         )
         self.read_count = 0
+        self.closed = False
 
     def get_owner(self) -> Profile | None:
         self.read_count += 1
@@ -52,6 +54,9 @@ class FakeProfileRepository:
         if self.profile is None:
             raise ProfileNotFoundError
         self.profile = None
+
+    def close(self) -> None:
+        self.closed = True
 
 
 @pytest.fixture
@@ -80,6 +85,29 @@ def test_get_me_returns_public_profile(api: tuple[TestClient, FakeProfileReposit
         "created_at": "2026-10-09T00:00:00+00:00",
         "updated_at": "2026-10-09T00:00:00+00:00",
     }
+
+
+def test_app_factory_opens_and_closes_repository_during_lifespan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("API_BEARER_TOKEN", TOKEN)
+    repository = FakeProfileRepository()
+    calls = 0
+
+    def repository_factory() -> FakeProfileRepository:
+        nonlocal calls
+        calls += 1
+        return repository
+
+    isolated_app = create_app(repository_factory)
+    assert calls == 0
+
+    with TestClient(isolated_app) as client:
+        assert calls == 1
+        assert client.get("/v1/users/me", headers=HEADERS).status_code == 200
+        assert not repository.closed
+
+    assert repository.closed
 
 
 def test_patch_me_normalizes_email_and_updates_only_supplied_fields(
